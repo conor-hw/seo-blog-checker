@@ -1,0 +1,13 @@
+{
+  "title": true,
+  "content": true,
+  "excerpt": true,
+  "meta_description": true,
+  "keywords": true,
+  "author": false,
+  "date": false,
+  "categories": true,
+  "tags": true,
+  "featured_image": false,
+  "url": true
+}

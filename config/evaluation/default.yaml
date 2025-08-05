@@ -1,0 +1,27 @@
+evaluation_criteria:
+  - keyword_density:
+      target: 2.5
+      weight: 0.3
+      min: 1.0
+      max: 5.0
+  - readability:
+      target_score: 60
+      weight: 0.2
+      algorithm: "flesch"
+  - heading_structure:
+      required_levels: ["h1", "h2", "h3"]
+      weight: 0.2
+  - meta_tags:
+      required: ["title", "description"]
+      weight: 0.3
+  - content_length:
+      min_words: 300
+      max_words: 2000
+      weight: 0.1
+
+output_format:
+  include_score: true
+  include_recommendations: true
+  include_examples: true
+  include_raw_data: false
+  report_type: "technical"
