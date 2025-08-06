@@ -1,6 +1,6 @@
-require('dotenv').config();
-const WordPressClient = require('./src/wordpress-client');
-const ConfigLoader = require('./src/config-loader');
+import 'dotenv/config';
+import WordPressClient from './src/wordpress-client.js';
+import ConfigLoader from './src/config-loader.js';
 
 async function testWordPressIntegration() {
   try {

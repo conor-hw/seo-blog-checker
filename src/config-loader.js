@@ -1,6 +1,6 @@
-const fs = require('fs').promises;
-const path = require('path');
-const YAML = require('yaml');
+import { promises as fs } from 'fs';
+import path from 'path';
+import YAML from 'yaml';
 
 class ConfigLoader {
   constructor() {
@@ -127,4 +127,4 @@ class ConfigLoader {
   }
 }
 
-module.exports = ConfigLoader;
+export default ConfigLoader;

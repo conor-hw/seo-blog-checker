@@ -1,4 +1,4 @@
-const axios = require('axios');
+import axios from 'axios';
 
 class WordPressClient {
   constructor() {
@@ -157,4 +157,4 @@ class WordPressClient {
   }
 }
 
-module.exports = WordPressClient;
+export default WordPressClient;

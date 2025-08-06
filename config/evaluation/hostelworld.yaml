@@ -1,0 +1,67 @@
+evaluation_criteria:
+  - eeat_score:
+      weight: 0.20
+      criteria:
+        - real_user_quotes: true
+        - ugc_contributions: true
+        - specialist_insights: true
+        - hw_brand_markers: true
+        - author_attribution: true
+      description: "Evaluates trustworthiness, experience, and authority"
+  
+  - technical_score:
+      weight: 0.10
+      criteria:
+        - metadata_optimized: true
+        - heading_structure: true
+        - no_broken_links: true
+        - schema_present: true
+        - internal_hw_links: true
+      description: "Assesses SEO integrity and structure"
+  
+  - relevance_score:
+      weight: 0.20
+      criteria:
+        - answers_top_queries: true
+        - gen_z_interests: true
+        - genuine_value: true
+        - comprehensive_coverage: true
+      description: "Evaluates user needs and intent match"
+  
+  - text_quality_score:
+      weight: 0.10
+      criteria:
+        - grammar_spelling: true
+        - clear_formatting: true
+        - localized_terms: true
+        - gen_z_tone: true
+      description: "Evaluates clarity, grammar, and Gen Z tone"
+  
+  - ai_optimization_score:
+      weight: 0.25
+      criteria:
+        - structured_faqs: true
+        - long_tail_keywords: true
+        - clean_headings_lists: true
+        - snippet_voice_ready: true
+        - ai_enrichment_opportunities: true
+      description: "Evaluates AI readiness and long-tail discovery"
+  
+  - freshness_score:
+      weight: 0.15
+      criteria:
+        - updated_recently: true
+        - current_events: true
+        - no_outdated_references: true
+        - current_links: true
+        - seasonal_accuracy: true
+      description: "Measures content timeliness"
+
+output_format:
+  include_score: true
+  include_recommendations: true
+  include_examples: true
+  include_raw_data: false
+  report_type: "hostelworld"
+  optimization_threshold: 75
+  excel_output: true 
