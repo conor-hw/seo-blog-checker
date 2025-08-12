@@ -247,7 +247,8 @@ Please provide your analysis in the following JSON format:
   "recommendations": ["Top recommendation 1", "Top recommendation 2"]
 }
 
-Focus on providing actionable insights and specific recommendations for improvement.`;
+Focus on providing actionable insights and specific recommendations for improvement.
+`;
 
     return prompt;
   }
