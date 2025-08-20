@@ -16,6 +16,7 @@ import GeminiClient from './gemini-client.js';
 import ContentExtractor from './content-extractor.js';
 import ReportGenerator from './report-generator.js';
 import ConfigLoader from './config-loader.js';
+import UniversalScraper from './universal-scraper.js';
 
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -244,6 +245,88 @@ async function processSinglePost(identifier, wordpressClient, geminiClient, cont
     console.error('Error in processSinglePost:', error);
     throw new Error(`Failed to process ${identifier.value}: ${error.message}`);
   }
+}
+
+// Add new command for universal URL processing
+program
+  .command('scrape')
+  .description('Evaluate any blog post URL')
+  .option('-u, --url <url>', 'Single URL to evaluate')
+  .option('-f, --file <file>', 'File containing URLs (one per line)')
+  .option('-e, --extraction-config <name>', 'Extraction configuration to use', 'default')
+  .option('-v, --evaluation-config <name>', 'Evaluation configuration to use', 'default')
+  .action(async (options) => {
+    try {
+      const urls = await getUrlsFromInput(options);
+      await processUrls(urls, options);
+    } catch (error) {
+      console.error(chalk.red('Error:'), error.message);
+      process.exit(1);
+    }
+  });
+
+async function getUrlsFromInput(options) {
+  if (options.url) {
+    return [options.url];
+  } else if (options.file) {
+    const fileContent = await fs.readFile(options.file, 'utf8');
+    return fileContent.split('\n')
+      .map(url => url.trim())
+      .filter(url => url && url.startsWith('http'));
+  } else {
+    throw new Error('Please provide either --url or --file option');
+  }
+}
+
+async function processUrls(urls, options) {
+  console.log(chalk.blue(`🔍 Processing ${urls.length} URL(s)...\n`));
+  
+  const scraper = new UniversalScraper();
+  const configLoader = new ConfigLoader();
+  const geminiClient = new GeminiClient();
+  
+  // Load configurations
+  const extractionConfig = await configLoader.loadExtractionConfig(options.extractionConfig);
+  const evaluationConfig = await configLoader.loadEvaluationConfig(options.evaluationConfig);
+  
+  const contentExtractor = new ContentExtractor(extractionConfig);
+  const reportGenerator = new ReportGenerator(evaluationConfig);
+  
+  for (let i = 0; i < urls.length; i++) {
+    const url = urls[i];
+    const spinner = ora(`Processing URL ${i + 1}/${urls.length}: ${url}`).start();
+    
+    try {
+      // Scrape the URL
+      spinner.text = `Scraping content from ${url}...`;
+      const scrapedData = await scraper.scrapeUrl(url);
+      
+      // Extract relevant content
+      spinner.text = 'Extracting content...';
+      const extractedContent = contentExtractor.extract(scrapedData);
+      
+      // Evaluate with AI
+      spinner.text = 'Evaluating with Gemini AI...';
+      const evaluation = await geminiClient.evaluate(extractedContent, evaluationConfig);
+      
+      // Generate and save report
+      spinner.text = 'Generating report...';
+      const report = reportGenerator.generate(evaluation, extractedContent);
+      const reportPath = await reportGenerator.save(report, extractedContent.slug);
+      
+      spinner.succeed(`✅ Report saved: ${reportPath}`);
+      
+      // Add delay between requests to be respectful
+      if (i < urls.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+      
+    } catch (error) {
+      spinner.fail(`❌ Failed to process ${url}: ${error.message}`);
+    }
+  }
+  
+  console.log(chalk.green('\n🎉 All URLs processed!'));
 }
 
 program.parse();

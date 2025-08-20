@@ -1,4 +1,4 @@
-import { promises as fs } from 'fs';
+import fs from 'fs/promises';
 import path from 'path';
 
 class ReportGenerator {
@@ -8,18 +8,15 @@ class ReportGenerator {
   }
 
   /**
-   * Generate a comprehensive Markdown report from evaluation results
-   * @param {Object} evaluation - Evaluation results from Gemini AI
-   * @param {Object} extractedContent - Original extracted content
-   * @returns {Object} Report object with content and metadata
+   * Generate a comprehensive analytical report
    */
   generate(evaluation, extractedContent) {
     const timestamp = new Date().toISOString();
-    const reportContent = this.buildReportContent(evaluation, extractedContent, timestamp);
+    const reportContent = this.buildAnalyticalReport(evaluation, extractedContent, timestamp);
     
     return {
       content: reportContent,
-      filename: `${extractedContent.slug}-evaluation-${Date.now()}.md`,
+      filename: `seo-analysis-report.md`,
       metadata: {
         slug: extractedContent.slug,
         timestamp,
@@ -30,64 +27,37 @@ class ReportGenerator {
   }
 
   /**
-   * Build the main report content for Hostelworld evaluation
+   * Build detailed analytical report in the requested format
    */
-  buildReportContent(evaluation, extractedContent, timestamp) {
-    // Check if this is a Hostelworld evaluation (has the new structure)
-    if (evaluation.eeat_score) {
-      return this.buildHostelworldReport(evaluation, extractedContent, timestamp);
-    }
-    
-    // Fall back to generic report structure
-    return this.buildGenericReport(evaluation, extractedContent, timestamp);
-  }
-
-  /**
-   * Build Hostelworld-specific report
-   */
-  buildHostelworldReport(evaluation, extractedContent, timestamp) {
-    const scoreEmoji = this.getScoreEmoji(evaluation.overall_score);
-    
+  buildAnalyticalReport(evaluation, content, timestamp) {
     return `# SEO Analysis Report
 
-**Post Title:** ${extractedContent.title || 'N/A'}  
-**URL:** ${extractedContent.url || 'N/A'}  
+**Post Title:** ${content.title || 'N/A'}  
+**URL:** ${content.url || 'N/A'}  
 **Analysis Date:** ${new Date(timestamp).toLocaleDateString()}  
 **AI Model:** ${evaluation.model || 'gemini-1.5-flash'}
 
-## Overall Score: ${scoreEmoji} ${evaluation.overall_score}/100
-
-<div align="center">
+## Overall Score: ${this.getScoreEmoji(evaluation.overall_score)} ${evaluation.overall_score}/100
 
 ${this.generateScoreBar(evaluation.overall_score)}
 
-</div>
+---
+
+## Score Breakdown
+
+${this.generateScoreTable(evaluation)}
 
 ---
 
-## 📊 Executive Summary
+## Analysis of Scores
 
-${evaluation.summary || 'Analysis completed successfully.'}
-
-### Key Metrics
-
-| Metric | Score | Status |
-|--------|-------|--------|
-${this.generateHostelworldMetricsTable(evaluation)}
+${this.generateDetailedScoreAnalysis(evaluation, content)}
 
 ---
 
-## 🔍 Detailed Analysis
+## Optimization Recommendation
 
-${this.generateHostelworldDetailedAnalysis(evaluation)}
-
----
-
-## 🎯 Priority Recommendations
-
-${evaluation.priority_recommendations ? 
-  evaluation.priority_recommendations.map((rec, index) => `### ${index + 1}. ${rec}`).join('\n\n') : 
-  'No specific priority recommendations provided.'}
+${this.generateOptimizationRecommendation(evaluation, content)}
 
 ---
 
@@ -95,593 +65,584 @@ ${evaluation.priority_recommendations ?
   }
 
   /**
-   * Generate metrics table for Hostelworld evaluation
+   * Generate detailed analysis for each score component
    */
-  generateHostelworldMetricsTable(evaluation) {
-    const metrics = [
-      { key: 'eeat_score', name: 'EEAT Score' },
-      { key: 'technical_score', name: 'Technical Score' },
-      { key: 'relevance_score', name: 'Relevance Score' },
-      { key: 'text_quality_score', name: 'Text Quality Score' },
-      { key: 'ai_optimization_score', name: 'AI Optimization Score' },
-      { key: 'freshness_score', name: 'Freshness Score' }
-    ];
+  generateDetailedScoreAnalysis(evaluation, content) {
+    const sections = [];
 
-    return metrics
-      .filter(metric => evaluation[metric.key])
-      .map(metric => {
-        const score = evaluation[metric.key].score;
-        const status = this.getScoreStatus(score);
-        const emoji = this.getScoreEmoji(score);
-        return `| ${metric.name} | ${score}/100 | ${emoji} ${status} |`;
-      })
-      .join('\n');
+    // Handle both old and new evaluation formats
+    if (evaluation.eeat_score) {
+      // New Hostelworld format
+      sections.push(this.analyzeEEATScore(evaluation.eeat_score, content));
+      sections.push(this.analyzeTechnicalScore(evaluation.technical_score, content));
+      sections.push(this.analyzeRelevanceScore(evaluation.relevance_score, content));
+      sections.push(this.analyzeTextQualityScore(evaluation.text_quality_score, content));
+      sections.push(this.analyzeAIOptimizationScore(evaluation.ai_optimization_score, content));
+      sections.push(this.analyzeFreshnessScore(evaluation.freshness_score, content));
+    } else if (evaluation.dimensions) {
+      // New structured format with dimensions
+      Object.entries(evaluation.dimensions).forEach(([key, dimension]) => {
+        sections.push(this.analyzeDimension(key, dimension, content));
+      });
+    }
+
+    return sections.join('\n\n');
   }
 
   /**
-   * Generate detailed analysis for Hostelworld evaluation
+   * Analyze EEAT Score with detailed insights
    */
-  generateHostelworldDetailedAnalysis(evaluation) {
-    const sections = [
-      { key: 'eeat_score', name: 'EEAT Score' },
-      { key: 'technical_score', name: 'Technical Score' },
-      { key: 'relevance_score', name: 'Relevance Score' },
-      { key: 'text_quality_score', name: 'Text Quality Score' },
-      { key: 'ai_optimization_score', name: 'AI Optimization Score' },
-      { key: 'freshness_score', name: 'Freshness Score' }
-    ];
-
-    return sections
-      .filter(section => evaluation[section.key])
-      .map(section => {
-        const data = evaluation[section.key];
-        const scoreEmoji = this.getScoreEmoji(data.score);
-        
-        let sectionContent = `### ${section.name} ${scoreEmoji} ${data.score}/100\n\n`;
-        sectionContent += `${data.analysis}\n\n`;
-        
-        if (data.recommendations && data.recommendations.length > 0) {
-          sectionContent += '**Recommendations:**\n';
-          data.recommendations.forEach((rec, index) => {
-            sectionContent += `${index + 1}. ${rec}\n`;
-          });
-          sectionContent += '\n';
-        }
-        
-        sectionContent += '---\n';
-        return sectionContent;
-      })
-      .join('\n');
-  }
-
-  /**
-   * Build generic report (existing functionality)
-   */
-  buildGenericReport(evaluation, extractedContent, timestamp) {
-    const dimensionNames = {
-      seo_technical: 'SEO Technical Foundation',
-      content_quality: 'Content Quality & Authority',
-      brand_alignment: 'Hostelworld Brand Alignment',
-      gen_z_appeal: 'Gen Z Appeal & Engagement',
-      user_experience: 'User Experience & Readability',
-      ai_optimization: 'AI Optimization & Future-Proofing'
-    };
-
-    return `# SEO Evaluation Report: ${extractedContent.title || extractedContent.slug}
-
-**Generated:** ${new Date(timestamp).toLocaleString()}  
-**Page URL:** ${extractedContent.url}  
-**Overall Score:** ${evaluation.overall_score}/100
-
----
-
-## 🎯 Executive Summary
-
-${this.generateExecutiveSummary(evaluation)}
-
----
-
-## 📊 Detailed Analysis by Dimension
-
-${Object.entries(evaluation.dimensions || {}).map(([key, dimension]) => 
-  this.generateDimensionSection(key, dimension, dimensionNames[key])
-).join('\n\n---\n\n')}
-
----
-
-## 🚀 Action Plan
-
-### 🔥 Top Priorities (Do First)
-${evaluation.summary.top_priorities.map((priority, index) => 
-  `${index + 1}. **${priority}**`
-).join('\n')}
-
-### ⚡ Quick Wins (Easy Impact)
-${evaluation.summary.quick_wins.map((win, index) => 
-  `${index + 1}. **${win}**`
-).join('\n')}
-
-### 📈 Long-term Strategy
-${evaluation.summary.long_term_strategy.map((strategy, index) => 
-  `${index + 1}. **${strategy}**`
-).join('\n')}
-
----
-
-## 📋 Implementation Roadmap
-
-### Week 1-2: Immediate Actions
-${this.getActionsByTimeline(evaluation, 'Immediate')}
-
-### Month 1: Short-term Improvements
-${this.getActionsByTimeline(evaluation, '1-2 weeks')}
-
-### Month 2+: Long-term Enhancements
-${this.getActionsByTimeline(evaluation, '1 month+')}
-
----
-
-## 📈 Expected Impact
-
-${this.generateImpactAnalysis(evaluation)}
-
----
-
-*Report generated by SEO Blog Checker v1.0.0*`;
-  }
-
-  /**
-   * Generate report header
-   * @param {Object} extractedContent - Original content
-   * @param {Object} evaluation - Evaluation results
-   * @returns {string} Header section
-   */
-  generateHeader(extractedContent, evaluation) {
-    const scoreColor = this.getScoreColor(evaluation.overall_score);
-    const scoreEmoji = this.getScoreEmoji(evaluation.overall_score);
+  analyzeEEATScore(eeatData, content) {
+    const score = eeatData.score;
+    const analysis = eeatData.analysis || '';
     
-    return `# SEO Analysis Report
+    let insights = `**EEAT Score (${score}/100)**: `;
+    
+    if (score >= 85) {
+      insights += `This article demonstrates strong expertise, authoritativeness, and trustworthiness. `;
+    } else if (score >= 70) {
+      insights += `The article shows good EEAT signals but requires immediate improvement. `;
+    } else {
+      insights += `EEAT signals are critically weak and must be enhanced immediately. `;
+    }
 
-**Post Title:** ${extractedContent.title || 'N/A'}  
-**URL:** ${extractedContent.url || 'N/A'}  
-**Analysis Date:** ${new Date().toLocaleDateString()}  
-**AI Model:** ${evaluation.model}
+    insights += analysis;
 
-## Overall Score: ${scoreEmoji} ${evaluation.overall_score}/100
+    // Add specific observations based on content
+    if (content.images && content.images.length > 0) {
+      insights += ` The article includes ${content.images.length} images which enhance trustworthiness and user engagement.`;
+    }
 
-<div align="center">
+    if (content.schema && content.schema.length > 0) {
+      insights += ` Schema markup is present (${content.schema.length} types found), which helps search engines understand the content structure.`;
+    }
 
-${this.generateScoreBar(evaluation.overall_score)}
+    // Add recommendations with assertive language
+    if (eeatData.recommendations && eeatData.recommendations.length > 0) {
+      insights += '\n\n**EEAT Actions Required:**\n';
+      eeatData.recommendations.forEach((rec, index) => {
+        insights += `${index + 1}. ${this.makeAssertive(rec)}\n`;
+      });
+    }
 
-</div>
-
----
-
-`;
+    return insights;
   }
 
   /**
-   * Generate executive summary
-   * @param {Object} evaluation - Evaluation results
-   * @returns {string} Executive summary section
+   * Analyze Technical Score with detailed insights
    */
-  generateExecutiveSummary(evaluation) {
+  analyzeTechnicalScore(techData, content) {
+    const score = techData.score;
+    const analysis = techData.analysis || '';
+    
+    let insights = `**Technical Score (${score}/100)**: `;
+    
+    if (score >= 90) {
+      insights += `The technical structure is excellent. Maintain current standards. `;
+    } else if (score >= 75) {
+      insights += `The technical foundation is solid but requires immediate fixes in key areas. `;
+    } else {
+      insights += `Technical SEO is failing and needs comprehensive overhaul immediately. `;
+    }
+
+    insights += analysis;
+
+    // Add technical observations with assertive language
+    insights += '\n\n**Technical Actions Required:**\n';
+    
+    if (content.title) {
+      const titleLength = content.title.length;
+      if (titleLength >= 50 && titleLength <= 60) {
+        insights += `• **Title**: Perfect length (${titleLength} characters) - "${content.title}"\n`;
+      } else if (titleLength < 50) {
+        insights += `• **Title**: TOO SHORT (${titleLength} characters) - Expand immediately to 50-60 characters for better SEO impact\n`;
+      } else {
+        insights += `• **Title**: TOO LONG (${titleLength} characters) - Shorten immediately to prevent truncation in search results\n`;
+      }
+    }
+
+    if (content.meta_description) {
+      const metaLength = content.meta_description.length;
+      if (metaLength >= 150 && metaLength <= 160) {
+        insights += `• **Meta Description**: Optimal length (${metaLength} characters) - Well done\n`;
+      } else if (metaLength < 150) {
+        insights += `• **Meta Description**: WASTED OPPORTUNITY (${metaLength} characters) - Expand to 150-160 characters to maximize SERP real estate\n`;
+      } else {
+        insights += `• **Meta Description**: WILL BE TRUNCATED (${metaLength} characters) - Shorten immediately\n`;
+      }
+    }
+
+    if (content.headers && content.headers.length > 0) {
+      const h1Count = content.headers.filter(h => h.level === 1).length;
+      const h2Count = content.headers.filter(h => h.level === 2).length;
+      insights += `• **Headings**: ${content.headers.length} total headings (${h1Count} H1, ${h2Count} H2)\n`;
+      
+      if (h1Count === 0) {
+        insights += `  🚨 CRITICAL: Missing H1 tag - Add immediately for proper SEO structure\n`;
+      } else if (h1Count > 1) {
+        insights += `  🚨 CRITICAL: Multiple H1 tags detected - Fix immediately, use only one H1\n`;
+      } else {
+        insights += `  ✅ H1 structure is correct\n`;
+      }
+    }
+
+    if (content.word_count) {
+      if (content.word_count >= 1500) {
+        insights += `• **Content Length**: Excellent depth (${content.word_count} words) - Maintain this standard\n`;
+      } else if (content.word_count >= 800) {
+        insights += `• **Content Length**: Adequate (${content.word_count} words) - Expand to 1500+ words for better rankings\n`;
+      } else {
+        insights += `• **Content Length**: INSUFFICIENT (${content.word_count} words) - Expand immediately to minimum 800 words\n`;
+      }
+    }
+
+    // Add recommendations with assertive language
+    if (techData.recommendations && techData.recommendations.length > 0) {
+      insights += '\n**Technical Fixes Required:**\n';
+      techData.recommendations.forEach((rec, index) => {
+        insights += `${index + 1}. ${this.makeAssertive(rec)}\n`;
+      });
+    }
+
+    return insights;
+  }
+
+  /**
+   * Analyze Relevance Score
+   */
+  analyzeRelevanceScore(relevanceData, content) {
+    const score = relevanceData.score;
+    const analysis = relevanceData.analysis || '';
+    
+    let insights = `**Relevance for User Score (${score}/100)**: `;
+    
+    if (score >= 85) {
+      insights += `The content delivers exceptional value to users. Maintain this standard. `;
+    } else if (score >= 70) {
+      insights += `Good relevance but must be improved to capture more user intent. `;
+    } else {
+      insights += `Relevance is failing users - immediate content overhaul required. `;
+    }
+
+    insights += analysis;
+
+    // Add content analysis with assertive language
+    if (content.content) {
+      const sentences = content.content.split(/[.!?]+/).length;
+      const avgWordsPerSentence = content.word_count ? Math.round(content.word_count / sentences) : 0;
+      
+      if (avgWordsPerSentence <= 20) {
+        insights += ` The content uses optimal sentence length (avg ${avgWordsPerSentence} words/sentence) for readability.`;
+      } else {
+        insights += ` Sentences are too long (avg ${avgWordsPerSentence} words/sentence) - Break them down immediately for better readability.`;
+      }
+    }
+
+    if (relevanceData.recommendations && relevanceData.recommendations.length > 0) {
+      insights += '\n\n**Relevance Actions Required:**\n';
+      relevanceData.recommendations.forEach((rec, index) => {
+        insights += `${index + 1}. ${this.makeAssertive(rec)}\n`;
+      });
+    }
+
+    return insights;
+  }
+
+  /**
+   * Analyze Text Quality Score
+   */
+  analyzeTextQualityScore(textData, content) {
+    const score = textData.score;
+    const analysis = textData.analysis || '';
+    
+    let insights = `**Text Quality Score (${score}/100)**: `;
+    
+    if (score >= 85) {
+      insights += `Writing quality is excellent. Maintain these standards. `;
+    } else if (score >= 70) {
+      insights += `Writing quality is acceptable but must be improved for competitive advantage. `;
+    } else {
+      insights += `Writing quality is substandard - immediate editorial review required. `;
+    }
+
+    insights += analysis;
+
+    // Add readability analysis with assertive language
+    if (content.content && content.word_count) {
+      const paragraphs = content.content.split('\n\n').filter(p => p.trim().length > 0).length;
+      const avgWordsPerParagraph = Math.round(content.word_count / paragraphs);
+      
+      insights += ` The content has ${paragraphs} paragraphs averaging ${avgWordsPerParagraph} words each.`;
+      
+      if (avgWordsPerParagraph <= 100) {
+        insights += ` This creates excellent readability and scannable content.`;
+      } else {
+        insights += ` Break down paragraphs immediately - they're too long for optimal readability.`;
+      }
+    }
+
+    if (textData.recommendations && textData.recommendations.length > 0) {
+      insights += '\n\n**Text Quality Fixes Required:**\n';
+      textData.recommendations.forEach((rec, index) => {
+        insights += `${index + 1}. ${this.makeAssertive(rec)}\n`;
+      });
+    }
+
+    return insights;
+  }
+
+  /**
+   * Analyze AI Optimization Score
+   */
+  analyzeAIOptimizationScore(aiData, content) {
+    const score = aiData.score;
+    const analysis = aiData.analysis || '';
+    
+    let insights = `**AI Optimisation Readiness Score (${score}/100)**: `;
+    
+    if (score >= 80) {
+      insights += `Excellent AI and voice search optimization. You're ahead of the competition. `;
+    } else if (score >= 60) {
+      insights += `AI optimization foundation exists but critical improvements needed immediately. `;
+    } else {
+      insights += `AI optimization is failing - you're losing traffic to AI-optimized competitors. Fix immediately. `;
+    }
+
+    insights += analysis;
+
+    // Analyze structured content with assertive language
+    if (content.headers && content.headers.length > 0) {
+      const questionHeadings = content.headers.filter(h => 
+        h.text.includes('?') || 
+        h.text.toLowerCase().startsWith('what') || 
+        h.text.toLowerCase().startsWith('how') || 
+        h.text.toLowerCase().startsWith('why') || 
+        h.text.toLowerCase().startsWith('where')
+      ).length;
+      
+      insights += ` Only ${questionHeadings} out of ${content.headers.length} headings are question-based.`;
+      
+      if (questionHeadings === 0) {
+        insights += ` This is a critical failure - Add question-based headings immediately for voice search optimization.`;
+      } else if (questionHeadings < content.headers.length * 0.3) {
+        insights += ` Insufficient question-based headings - Convert more headings to questions immediately.`;
+      } else {
+        insights += ` Good question-based heading ratio - maintain this approach.`;
+      }
+    }
+
+    if (aiData.recommendations && aiData.recommendations.length > 0) {
+      insights += '\n\n**AI Optimization Actions Required:**\n';
+      aiData.recommendations.forEach((rec, index) => {
+        insights += `${index + 1}. ${this.makeAssertive(rec)}\n`;
+      });
+    }
+
+    return insights;
+  }
+
+  /**
+   * Analyze Freshness Score
+   */
+  analyzeFreshnessScore(freshnessData, content) {
+    const score = freshnessData.score;
+    const analysis = freshnessData.analysis || '';
+    
+    let insights = `**Freshness Score (${score}/100)**: `;
+    
+    if (score >= 80) {
+      insights += `Content is current and competitive. Maintain regular updates. `;
+    } else if (score >= 60) {
+      insights += `Content is aging and losing relevance - update immediately. `;
+    } else {
+      insights += `Content is outdated and harming your rankings - complete refresh required immediately. `;
+    }
+
+    insights += analysis;
+
+    // Add freshness indicators with assertive language
+    const currentYear = new Date().getFullYear();
+    if (content.content) {
+      const hasCurrentYear = content.content.includes(currentYear.toString());
+      const hasPreviousYear = content.content.includes((currentYear - 1).toString());
+      
+      if (hasCurrentYear) {
+        insights += ` Content references current year (${currentYear}) - good freshness signal.`;
+      } else if (hasPreviousYear) {
+        insights += ` Content only references ${currentYear - 1} - Update with ${currentYear} information immediately.`;
+      } else {
+        insights += ` No recent year references - Add current year (${currentYear}) content immediately.`;
+      }
+    }
+
+    if (freshnessData.recommendations && freshnessData.recommendations.length > 0) {
+      insights += '\n\n**Freshness Actions Required:**\n';
+      freshnessData.recommendations.forEach((rec, index) => {
+        insights += `${index + 1}. ${this.makeAssertive(rec)}\n`;
+      });
+    }
+
+    return insights;
+  }
+
+  /**
+   * Generate optimization recommendations with assertive language
+   */
+  generateOptimizationRecommendation(evaluation, content) {
     const score = evaluation.overall_score;
-    let performance, recommendations;
+    let recommendation = '';
 
     if (score >= 80) {
-      performance = "🟢 **Excellent Performance** - This content is performing very well across most SEO dimensions.";
-      recommendations = "Focus on fine-tuning and maintaining current quality while exploring advanced optimization opportunities.";
+      recommendation = `This article performs well with a score above 80, but don't get complacent. Continue optimizing the lowest-scoring areas to maintain competitive advantage and prevent ranking decay.`;
     } else if (score >= 60) {
-      performance = "🟡 **Good Performance** - This content has a solid foundation but has room for improvement.";
-      recommendations = "Address the medium and high-priority recommendations to boost performance significantly.";
-    } else if (score >= 40) {
-      performance = "🟠 **Needs Improvement** - This content requires significant optimization to compete effectively.";
-      recommendations = "Focus on high-priority technical SEO fixes and content quality improvements first.";
+      recommendation = `This article is underperforming with significant optimization opportunities. Execute the high-priority recommendations immediately to unlock better rankings and traffic.`;
     } else {
-      performance = "🔴 **Poor Performance** - This content needs substantial work across multiple dimensions.";
-      recommendations = "Start with fundamental SEO technical fixes before moving to content and engagement improvements.";
+      recommendation = `This article is failing SEO standards and losing you traffic. Implement all critical fixes immediately before working on advanced optimizations. Your competitors are outranking you.`;
     }
 
-    return `${performance}
+    // Add specific suggestions with assertive language
+    const suggestions = this.generateSpecificSuggestions(evaluation, content);
+    if (suggestions.length > 0) {
+      recommendation += '\n\n**Critical Fixes - Execute Immediately:**\n' + suggestions.join('\n');
+    }
 
-**Key Recommendation:** ${recommendations}
+    // Add missing content sections with assertive language
+    const missingSections = this.identifyMissingSections(evaluation, content);
+    if (missingSections.length > 0) {
+      recommendation += '\n\n**Missing Content - Add Immediately:**\n' + missingSections.join('\n');
+    }
 
-**Strongest Areas:** ${this.getTopPerformingDimensions(evaluation)}  
-**Areas for Improvement:** ${this.getLowestPerformingDimensions(evaluation)}`;
+    // Add title/meta/heading improvements with assertive language
+    const titleMetaImprovements = this.generateTitleMetaImprovements(content);
+    if (titleMetaImprovements) {
+      recommendation += '\n\n**Title/Meta/Heading Fixes - Execute Now:**\n' + titleMetaImprovements;
+    }
+
+    return recommendation;
   }
 
   /**
-   * Generate detailed analysis section
-   * @param {Object} evaluation - Evaluation results
-   * @returns {string} Detailed analysis section
+   * Generate specific suggestions with assertive language
    */
-  generateDetailedAnalysis(evaluation) {
-    let analysis = '## 🔍 Detailed Analysis\n\n';
+  generateSpecificSuggestions(evaluation, content) {
+    const suggestions = [];
 
-    for (const [criterionName, criterionData] of Object.entries(evaluation.evaluations || evaluation)) {
-      if (criterionName === 'overall_score' || criterionName === 'optimization_recommendation' || criterionName === 'summary' || criterionName === 'priority_recommendations') {
-        continue;
+    // Check freshness with assertive language
+    if (evaluation.freshness_score && evaluation.freshness_score.score < 70) {
+      suggestions.push('• **Freshness**: Execute complete editorial review immediately. Update all statistics, verify every link, add current year references.');
+    }
+
+    // Check AI optimization with assertive language
+    if (evaluation.ai_optimization_score && evaluation.ai_optimization_score.score < 70) {
+      suggestions.push('• **AI Optimization**: Add structured FAQ section now. Convert headings to question format immediately for voice search capture.');
+    }
+
+    // Check EEAT with assertive language
+    if (evaluation.eeat_score && evaluation.eeat_score.score < 80) {
+      suggestions.push('• **EEAT**: Add user testimonials, expert quotes, and authoritative citations immediately. Your credibility is at stake.');
+    }
+
+    // Check technical with assertive language
+    if (evaluation.technical_score && evaluation.technical_score.score < 85) {
+      suggestions.push('• **Technical**: Fix heading structure, implement internal linking strategy, and deploy proper schema markup immediately.');
+    }
+
+    return suggestions;
+  }
+
+  /**
+   * Identify missing content sections with assertive language
+   */
+  identifyMissingSections(evaluation, content) {
+    const missing = [];
+
+    // Check for FAQ section
+    if (!content.content || !content.content.toLowerCase().includes('faq')) {
+      missing.push('• Add comprehensive FAQ section immediately - you\'re missing voice search opportunities');
+    }
+
+    // Check for conclusion
+    if (!content.content || (!content.content.toLowerCase().includes('conclusion') && !content.content.toLowerCase().includes('summary'))) {
+      missing.push('• Add strong conclusion section now - users and search engines expect closure');
+    }
+
+    // Check for call-to-action
+    if (!content.content || !content.content.toLowerCase().includes('comment')) {
+      missing.push('• Add clear call-to-action immediately - you\'re wasting engagement opportunities');
+    }
+
+    return missing;
+  }
+
+  /**
+   * Generate title/meta improvements with assertive language
+   */
+  generateTitleMetaImprovements(content) {
+    let improvements = '';
+
+    if (content.title) {
+      const titleLength = content.title.length;
+      if (titleLength < 50) {
+        improvements += `• **Title**: EXPAND NOW - Current ${titleLength} characters wastes SEO potential. Target 50-60 characters immediately.\n`;
+      } else if (titleLength > 60) {
+        improvements += `• **Title**: SHORTEN NOW - Current ${titleLength} characters will be truncated. Cut to 50-60 characters immediately.\n`;
+      } else {
+        improvements += `• **Title**: Optimal length (${titleLength} characters) - maintain this standard.\n`;
       }
-      
-      const scoreColor = this.getScoreColor(criterionData.score);
-      const scoreEmoji = this.getScoreEmoji(criterionData.score);
-      
-      analysis += `### ${this.formatCriterionName(criterionName)} ${scoreEmoji} ${criterionData.score}/100\n\n`;
-      analysis += `${criterionData.analysis}\n\n`;
-      
-      if (criterionData.recommendations && criterionData.recommendations.length > 0) {
-        analysis += '**Recommendations:**\n';
-        criterionData.recommendations.forEach((rec, index) => {
-          analysis += `${index + 1}. ${rec}\n`;
-        });
-        analysis += '\n';
+    }
+
+    if (content.meta_description) {
+      const metaLength = content.meta_description.length;
+      if (metaLength < 150) {
+        improvements += `• **Meta Description**: EXPAND IMMEDIATELY - Current ${metaLength} characters wastes SERP real estate. Target 150-160 characters.\n`;
+      } else if (metaLength > 160) {
+        improvements += `• **Meta Description**: TRIM IMMEDIATELY - Current ${metaLength} characters will be truncated. Cut to 150-160 characters.\n`;
+      } else {
+        improvements += `• **Meta Description**: Perfect length (${metaLength} characters) - maintain this standard.\n`;
       }
-      
-      analysis += '---\n\n';
     }
 
-    return analysis;
+    if (content.headers && content.headers.length > 0) {
+      improvements += `• **Headings**: Convert to question format immediately (e.g., "What is X?" instead of "X") to capture long-tail searches.\n`;
+    }
+
+    return improvements;
   }
 
   /**
-   * Generate recommendations section
-   * @param {Object} evaluation - Evaluation results
-   * @returns {string} Recommendations section
+   * Generate score bar visualization
    */
-  generateRecommendations(evaluation) {
-    const recommendations = evaluation.priority_recommendations || evaluation.recommendations;
-    
-    if (!recommendations || recommendations.length === 0) {
-      return '';
-    }
-
-    let recSection = '## 🎯 Priority Recommendations\n\n';
-    
-    recommendations.forEach((rec, index) => {
-      recSection += `### ${index + 1}. ${rec}\n\n`;
-    });
-
-    recSection += '---\n\n';
-    return recSection;
+  generateScoreBar(score) {
+    const filledBars = Math.round(score / 10);
+    const emptyBars = 10 - filledBars;
+    const bar = '█'.repeat(filledBars) + '░'.repeat(emptyBars);
+    return `<div align="center">\n\n\`${bar}\` ${score}%\n\n</div>`;
   }
 
   /**
-   * Generate technical details section
-   * @param {Object} evaluation - Evaluation results
-   * @param {Object} extractedContent - Original content
-   * @returns {string} Technical details section
+   * Get emoji based on score
    */
-  generateTechnicalDetails(evaluation, extractedContent) {
-    return `## 🔧 Technical Details
-
-### Content Statistics
-- **Word Count:** ${this.getWordCount(extractedContent.content)}
-- **Title Length:** ${extractedContent.title?.length || 0} characters
-- **Meta Description Length:** ${extractedContent.meta_description?.length || 0} characters
-- **Keywords Count:** ${extractedContent.keywords?.length || 0}
-
-### Evaluation Configuration
-\`\`\`yaml
-${JSON.stringify(evaluation.config_used, null, 2)}
-\`\`\`
-
-### Raw Evaluation Data
-\`\`\`json
-${JSON.stringify(evaluation, null, 2)}
-\`\`\`
-
----
-`;
+  getScoreEmoji(score) {
+    if (score >= 80) return '🟢';
+    if (score >= 60) return '🟡';
+    if (score >= 40) return '🟠';
+    return '🔴';
   }
 
   /**
-   * Generate metrics table for executive summary
-   * @param {Object} evaluation - Evaluation results
-   * @returns {string} Metrics table
+   * Generate comprehensive score breakdown table
    */
-  generateMetricsTable(evaluation) {
-    let table = '';
-    
-    for (const [criterionName, criterionData] of Object.entries(evaluation.evaluations || evaluation)) {
-      if (criterionName === 'overall_score' || criterionName === 'optimization_recommendation' || criterionName === 'summary' || criterionName === 'priority_recommendations') {
-        continue;
-      }
-      
-      const status = this.getScoreStatus(criterionData.score);
-      const emoji = this.getScoreEmoji(criterionData.score);
-      
-      table += `| ${this.formatCriterionName(criterionName)} | ${criterionData.score}/100 | ${emoji} ${status} |\n`;
+  generateScoreTable(evaluation) {
+    let table = `| Metric | Score | Weight | Weighted Score | Status |\n`;
+    table += `|--------|-------|--------|----------------|--------|\n`;
+
+    if (evaluation.eeat_score) {
+      // Hostelworld format with individual scores
+      const metrics = [
+        { key: 'eeat_score', name: 'EEAT Score', weight: 25 },
+        { key: 'technical_score', name: 'Technical Score', weight: 20 },
+        { key: 'relevance_score', name: 'Relevance Score', weight: 20 },
+        { key: 'text_quality_score', name: 'Text Quality Score', weight: 15 },
+        { key: 'ai_optimization_score', name: 'AI Optimization Score', weight: 10 },
+        { key: 'freshness_score', name: 'Freshness Score', weight: 10 }
+      ];
+
+      metrics.forEach(metric => {
+        if (evaluation[metric.key]) {
+          const score = evaluation[metric.key].score;
+          const weightedScore = (score * metric.weight / 100).toFixed(1);
+          const status = this.getScoreStatus(score);
+          const emoji = this.getScoreEmoji(score);
+          
+          table += `| ${metric.name} | ${score}/100 | ${metric.weight}% | ${weightedScore} | ${emoji} ${status} |\n`;
+        }
+      });
+
+      // Add overall score row
+      table += `|--------|-------|--------|----------------|--------|\n`;
+      table += `| **Overall Score** | **${evaluation.overall_score}/100** | **100%** | **${evaluation.overall_score}** | **${this.getScoreEmoji(evaluation.overall_score)} ${this.getScoreStatus(evaluation.overall_score)}** |\n`;
+
+    } else if (evaluation.dimensions) {
+      // New structured format with dimensions
+      Object.entries(evaluation.dimensions).forEach(([key, dimension]) => {
+        const name = this.formatDimensionName(key);
+        const score = dimension.score;
+        const weight = dimension.weight;
+        const weightedScore = dimension.weighted_score?.toFixed(1) || (score * weight / 100).toFixed(1);
+        const status = this.getScoreStatus(score);
+        const emoji = this.getScoreEmoji(score);
+        
+        table += `| ${name} | ${score}/100 | ${weight}% | ${weightedScore} | ${emoji} ${status} |\n`;
+      });
+
+      // Add overall score row
+      table += `|--------|-------|--------|----------------|--------|\n`;
+      table += `| **Overall Score** | **${evaluation.overall_score}/100** | **100%** | **${evaluation.overall_score}** | **${this.getScoreEmoji(evaluation.overall_score)} ${this.getScoreStatus(evaluation.overall_score)}** |\n`;
+
+    } else {
+      // Fallback for other formats
+      table += `| Overall Score | ${evaluation.overall_score}/100 | 100% | ${evaluation.overall_score} | ${this.getScoreEmoji(evaluation.overall_score)} ${this.getScoreStatus(evaluation.overall_score)} |\n`;
     }
-    
+
     return table;
   }
 
   /**
-   * Generate visual score bar
-   * @param {number} score - Overall score
-   * @returns {string} Score bar
-   */
-  generateScoreBar(score) {
-    const filledBlocks = Math.round(score / 10);
-    const emptyBlocks = 10 - filledBlocks;
-    const filled = '█'.repeat(filledBlocks);
-    const empty = '░'.repeat(emptyBlocks);
-    
-    return `\`${filled}${empty}\` ${score}%`;
-  }
-
-  /**
-   * Get score color for formatting
-   * @param {number} score - Score value
-   * @returns {string} Color indicator
-   */
-  getScoreColor(score) {
-    if (score >= 80) return '🟢';
-    if (score >= 60) return '🟡';
-    return '🔴';
-  }
-
-  /**
-   * Get score emoji
-   * @param {number} score - Score value
-   * @returns {string} Emoji
-   */
-  getScoreEmoji(score) {
-    if (score >= 90) return '🟢';
-    if (score >= 80) return '🟢';
-    if (score >= 70) return '🟢';
-    if (score >= 60) return '🟡';
-    return '🔴';
-  }
-
-  /**
    * Get score status text
-   * @param {number} score - Score value
-   * @returns {string} Status text
    */
   getScoreStatus(score) {
     if (score >= 90) return 'Excellent';
     if (score >= 80) return 'Good';
-    if (score >= 70) return 'Fair';
-    if (score >= 60) return 'Needs Improvement';
-    return 'Poor';
+    if (score >= 60) return 'Fair';
+    if (score >= 40) return 'Poor';
+    return 'Critical';
   }
 
   /**
-   * Format criterion name for display
-   * @param {string} criterionName - Raw criterion name
-   * @returns {string} Formatted name
+   * Format dimension names for display
    */
-  formatCriterionName(criterionName) {
-    return criterionName
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  }
-
-  /**
-   * Get word count from text
-   * @param {string} text - Text content
-   * @returns {number} Word count
-   */
-  getWordCount(text) {
-    if (!text) return 0;
-    return text.trim().split(/\s+/).length;
+  formatDimensionName(key) {
+    const names = {
+      seo_technical: 'SEO Technical Foundation',
+      content_quality: 'Content Quality & Authority',
+      brand_alignment: 'Brand Alignment',
+      gen_z_appeal: 'Gen Z Appeal & Engagement',
+      user_experience: 'User Experience & Readability',
+      ai_optimization: 'AI Optimization & Future-Proofing'
+    };
+    return names[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   }
 
   /**
    * Save report to file
-   * @param {Object} report - Report object
-   * @param {string} slug - Post slug for filename
-   * @returns {Promise<string>} Path to saved report
    */
   async save(report, slug) {
-    try {
-      // Create reports directory if it doesn't exist
-      await fs.mkdir(this.reportsDir, { recursive: true });
-      
-      // Create post-specific directory
-      const postDir = path.join(this.reportsDir, slug);
-      await fs.mkdir(postDir, { recursive: true });
-      
-      // Save main report
-      const reportPath = path.join(postDir, 'seo-analysis-report.md');
-      await fs.writeFile(reportPath, report.content, 'utf8');
-      
-      // Save metadata
-      const metadataPath = path.join(postDir, 'metadata.json');
-      await fs.writeFile(metadataPath, JSON.stringify(report.metadata, null, 2), 'utf8');
-      
-      // Save raw evaluation data
-      const rawDataPath = path.join(postDir, 'raw-evaluation.json');
-      await fs.writeFile(rawDataPath, JSON.stringify(report.metadata, null, 2), 'utf8');
-      
-      return reportPath;
-    } catch (error) {
-      throw new Error(`Failed to save report: ${error.message}`);
-    }
+    const slugDir = path.join(this.reportsDir, slug);
+    await fs.mkdir(slugDir, { recursive: true });
+    
+    const reportPath = path.join(slugDir, report.filename);
+    await fs.writeFile(reportPath, report.content, 'utf8');
+    
+    return reportPath;
   }
 
   /**
-   * Generate different report formats
-   * @param {Object} evaluation - Evaluation results
-   * @param {Object} extractedContent - Original content
-   * @param {string} format - Report format ('technical', 'executive', 'content-creator')
-   * @returns {string} Formatted report
+   * Convert suggestions to assertive language
    */
-  generateFormattedReport(evaluation, extractedContent, format = 'technical') {
-    switch (format) {
-      case 'executive':
-        return this.generateExecutiveReport(evaluation, extractedContent);
-      case 'content-creator':
-        return this.generateContentCreatorReport(evaluation, extractedContent);
-      default:
-        return this.buildReportContent(evaluation, extractedContent);
-    }
-  }
-
-  /**
-   * Generate executive summary report
-   * @param {Object} evaluation - Evaluation results
-   * @param {Object} extractedContent - Original content
-   * @returns {string} Executive report
-   */
-  generateExecutiveReport(evaluation, extractedContent) {
-    return `# SEO Performance Summary
-
-**Post:** ${extractedContent.title}  
-**Score:** ${evaluation.overall_score}/100  
-**Date:** ${new Date().toLocaleDateString()}
-
-## Key Findings
-
-${evaluation.summary}
-
-## Priority Actions
-
-${evaluation.recommendations.map((rec, index) => `${index + 1}. ${rec}`).join('\n')}
-
-## Performance Overview
-
-${this.generateMetricsTable(evaluation)}
-`;
-  }
-
-  /**
-   * Generate content creator report
-   * @param {Object} evaluation - Evaluation results
-   * @param {Object} extractedContent - Original content
-   * @returns {string} Content creator report
-   */
-  generateContentCreatorReport(evaluation, extractedContent) {
-    return `# Content Optimization Guide
-
-**Post:** ${extractedContent.title}  
-**Current Score:** ${evaluation.overall_score}/100
-
-## What's Working Well
-
-${this.getPositiveFeedback(evaluation)}
-
-## Areas for Improvement
-
-${this.getActionableFeedback(evaluation)}
-
-## Quick Wins
-
-${evaluation.recommendations.slice(0, 3).map((rec, index) => `${index + 1}. ${rec}`).join('\n')}
-
-## Next Steps
-
-1. Review the detailed analysis below
-2. Implement the top 3 recommendations
-3. Re-run analysis after changes
-`;
-  }
-
-  /**
-   * Extract positive feedback from evaluation
-   * @param {Object} evaluation - Evaluation results
-   * @returns {string} Positive feedback
-   */
-  getPositiveFeedback(evaluation) {
-    const positives = [];
-    
-    for (const [criterionName, criterionData] of Object.entries(evaluation.evaluations)) {
-      if (criterionData.score >= 80) {
-        positives.push(`- **${this.formatCriterionName(criterionName)}**: ${criterionData.analysis.split('.')[0]}.`);
-      }
-    }
-    
-    return positives.length > 0 ? positives.join('\n') : '- No specific strengths identified in this analysis.';
-  }
-
-  /**
-   * Extract actionable feedback from evaluation
-   * @param {Object} evaluation - Evaluation results
-   * @returns {string} Actionable feedback
-   */
-  getActionableFeedback(evaluation) {
-    const improvements = [];
-    
-    for (const [criterionName, criterionData] of Object.entries(evaluation.evaluations)) {
-      if (criterionData.score < 80 && criterionData.recommendations) {
-        improvements.push(`- **${this.formatCriterionName(criterionName)}**: ${criterionData.recommendations[0]}`);
-      }
-    }
-    
-    return improvements.length > 0 ? improvements.join('\n') : '- No specific improvements needed.';
-  }
-
-  generateDimensionSection(key, dimension, name) {
-    const scoreEmoji = dimension.score >= 80 ? '🟢' : dimension.score >= 60 ? '🟡' : dimension.score >= 40 ? '🟠' : '🔴';
-    
-    return `## ${scoreEmoji} ${name}
-**Score:** ${dimension.score}/100 (Weight: ${dimension.weight}%, Weighted Score: ${dimension.weighted_score.toFixed(1)})
-
-### Current Analysis
-${dimension.analysis}
-
-### Issues Identified
-${dimension.issues_found.map(issue => `- ❌ ${issue}`).join('\n')}
-
-### 🛠️ Actionable Recommendations
-
-${dimension.actionable_recommendations.map((rec, index) => 
-  this.formatRecommendation(rec, index + 1)
-).join('\n\n')}`;
-  }
-
-  formatRecommendation(rec, index) {
-    const priorityEmoji = rec.priority === 'High' ? '🔴' : rec.priority === 'Medium' ? '🟡' : '🟢';
-    const effortEmoji = rec.effort === 'High' ? '🔴' : rec.effort === 'Medium' ? '🟡' : '🟢';
-    
-    return `#### ${index}. ${priorityEmoji} ${rec.action}
-
-**Priority:** ${rec.priority} | **Effort:** ${effortEmoji} ${rec.effort} | **Timeline:** ${rec.timeline}
-
-**Expected Impact:** ${rec.impact}`;
-  }
-
-  getActionsByTimeline(evaluation, timeline) {
-    const actions = [];
-    Object.values(evaluation.dimensions).forEach(dimension => {
-      dimension.actionable_recommendations
-        .filter(rec => rec.timeline === timeline)
-        .forEach(rec => {
-          const priorityEmoji = rec.priority === 'High' ? '🔴' : rec.priority === 'Medium' ? '🟡' : '🟢';
-          actions.push(`- ${priorityEmoji} **${rec.action}** (${rec.effort} effort)`);
-        });
-    });
-    
-    return actions.length > 0 ? actions.join('\n') : '- No specific actions identified for this timeframe';
-  }
-
-  generateImpactAnalysis(evaluation) {
-    const totalPossibleImprovement = Object.values(evaluation.dimensions)
-      .reduce((sum, dim) => sum + ((100 - dim.score) * (dim.weight / 100)), 0);
-    
-    return `If all high-priority recommendations are implemented, this page could potentially improve by **${totalPossibleImprovement.toFixed(1)} points**, bringing the overall score to approximately **${(evaluation.overall_score + totalPossibleImprovement).toFixed(1)}/100**.
-
-**Estimated Timeline for Full Implementation:** 2-3 months  
-**Resource Requirements:** Content team, technical SEO specialist, design support`;
-  }
-
-  getTopPerformingDimensions(evaluation) {
-    return Object.entries(evaluation.dimensions)
-      .sort((a, b) => b[1].score - a[1].score)
-      .slice(0, 2)
-      .map(([key, dim]) => `${key.replace('_', ' ')} (${dim.score}/100)`)
-      .join(', ');
-  }
-
-  getLowestPerformingDimensions(evaluation) {
-    return Object.entries(evaluation.dimensions)
-      .sort((a, b) => a[1].score - b[1].score)
-      .slice(0, 2)
-      .map(([key, dim]) => `${key.replace('_', ' ')} (${dim.score}/100)`)
-      .join(', ');
+  makeAssertive(text) {
+    // Convert common suggestion phrases to assertive commands
+    return text
+      .replace(/consider /gi, '')
+      .replace(/you might want to /gi, '')
+      .replace(/you could /gi, '')
+      .replace(/it would be good to /gi, '')
+      .replace(/try to /gi, '')
+      .replace(/should /gi, 'must ')
+      .replace(/could improve /gi, 'improve immediately')
+      .replace(/may want to /gi, 'must ')
+      .replace(/would benefit from /gi, 'requires immediate')
+      .replace(/recommend /gi, 'execute')
+      .replace(/suggest /gi, 'implement now:');
   }
 }
 
