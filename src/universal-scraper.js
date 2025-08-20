@@ -110,15 +110,40 @@ class UniversalScraper {
 
   extractMeta($) {
     return {
+      // Basic SEO metadata
       description: $('meta[name="description"]').attr('content') || '',
       keywords: $('meta[name="keywords"]').attr('content') || '',
       _yoast_wpseo_metadesc: $('meta[name="description"]').attr('content') || '',
       _yoast_wpseo_focuskw: $('meta[name="keywords"]').attr('content')?.split(',')[0] || '',
+      
+      // Technical SEO elements
+      canonical_url: $('link[rel="canonical"]').attr('href') || '',
+      robots: $('meta[name="robots"]').attr('content') || '',
+      viewport: $('meta[name="viewport"]').attr('content') || '',
+      language: $('html').attr('lang') || '',
+      
+      // Open Graph metadata
       og_title: $('meta[property="og:title"]').attr('content') || '',
       og_description: $('meta[property="og:description"]').attr('content') || '',
       og_image: $('meta[property="og:image"]').attr('content') || '',
+      og_type: $('meta[property="og:type"]').attr('content') || '',
+      og_url: $('meta[property="og:url"]').attr('content') || '',
+      og_site_name: $('meta[property="og:site_name"]').attr('content') || '',
+      
+      // Article-specific Open Graph
+      article_author: $('meta[property="article:author"]').attr('content') || '',
+      article_published_time: $('meta[property="article:published_time"]').attr('content') || '',
+      article_modified_time: $('meta[property="article:modified_time"]').attr('content') || '',
+      article_section: $('meta[property="article:section"]').attr('content') || '',
+      article_tag: $('meta[property="article:tag"]').attr('content') || '',
+      
+      // Twitter metadata
       twitter_title: $('meta[name="twitter:title"]').attr('content') || '',
-      twitter_description: $('meta[name="twitter:description"]').attr('content') || ''
+      twitter_description: $('meta[name="twitter:description"]').attr('content') || '',
+      twitter_card: $('meta[name="twitter:card"]').attr('content') || '',
+      twitter_site: $('meta[name="twitter:site"]').attr('content') || '',
+      twitter_creator: $('meta[name="twitter:creator"]').attr('content') || '',
+      twitter_image: $('meta[name="twitter:image"]').attr('content') || ''
     };
   }
 
@@ -132,7 +157,151 @@ class UniversalScraper {
         // Invalid JSON schema, skip
       }
     });
-    return schemas;
+    return this.analyzeSchemas(schemas);
+  }
+
+  /**
+   * Analyze extracted schemas for completeness and validation
+   * @param {Array} schemas - Array of schema objects
+   * @returns {Object} Schema analysis results
+   */
+  analyzeSchemas(schemas) {
+    if (!schemas.length) {
+      return {
+        raw_schemas: [],
+        analysis: {
+          total_schemas: 0,
+          schema_types: [],
+          has_article_schema: false,
+          has_organization_schema: false,
+          has_breadcrumb_schema: false,
+          completeness_score: 0,
+          validation_issues: []
+        }
+      };
+    }
+
+    const schemaTypes = [];
+    const validationIssues = [];
+    let hasArticleSchema = false;
+    let hasOrganizationSchema = false;
+    let hasBreadcrumbSchema = false;
+    let totalCompleteness = 0;
+
+    schemas.forEach((schema, index) => {
+      const schemaType = this.getSchemaType(schema);
+      schemaTypes.push(schemaType);
+      
+      // Check for specific schema types
+      if (schemaType.includes('Article') || schemaType.includes('BlogPosting')) {
+        hasArticleSchema = true;
+      }
+      if (schemaType.includes('Organization')) {
+        hasOrganizationSchema = true;
+      }
+      if (schemaType.includes('BreadcrumbList')) {
+        hasBreadcrumbSchema = true;
+      }
+
+      // Validate schema completeness
+      const completeness = this.validateSchemaCompleteness(schema, schemaType);
+      totalCompleteness += completeness.score;
+      
+      if (completeness.issues.length > 0) {
+        validationIssues.push({
+          schema_index: index,
+          schema_type: schemaType,
+          issues: completeness.issues
+        });
+      }
+    });
+
+    return {
+      raw_schemas: schemas,
+      analysis: {
+        total_schemas: schemas.length,
+        schema_types: [...new Set(schemaTypes)],
+        has_article_schema: hasArticleSchema,
+        has_organization_schema: hasOrganizationSchema,
+        has_breadcrumb_schema: hasBreadcrumbSchema,
+        completeness_score: Math.round(totalCompleteness / schemas.length),
+        validation_issues: validationIssues
+      }
+    };
+  }
+
+  /**
+   * Get schema type from schema object
+   * @param {Object} schema - Schema object
+   * @returns {string} Schema type
+   */
+  getSchemaType(schema) {
+    if (Array.isArray(schema)) {
+      return schema.map(s => s['@type'] || 'Unknown').join(', ');
+    }
+    return schema['@type'] || 'Unknown';
+  }
+
+  /**
+   * Validate schema completeness based on type
+   * @param {Object} schema - Schema object
+   * @param {string} schemaType - Type of schema
+   * @returns {Object} Validation results
+   */
+  validateSchemaCompleteness(schema, schemaType) {
+    const issues = [];
+    let score = 100;
+
+    // Common required fields
+    if (!schema['@context']) {
+      issues.push('Missing @context');
+      score -= 20;
+    }
+    if (!schema['@type']) {
+      issues.push('Missing @type');
+      score -= 20;
+    }
+
+    // Article/BlogPosting specific validation
+    if (schemaType.includes('Article') || schemaType.includes('BlogPosting')) {
+      if (!schema.headline && !schema.name) {
+        issues.push('Missing headline/name for article');
+        score -= 15;
+      }
+      if (!schema.author) {
+        issues.push('Missing author information');
+        score -= 10;
+      }
+      if (!schema.datePublished) {
+        issues.push('Missing publication date');
+        score -= 10;
+      }
+      if (!schema.image) {
+        issues.push('Missing featured image');
+        score -= 5;
+      }
+      if (!schema.publisher) {
+        issues.push('Missing publisher information');
+        score -= 10;
+      }
+    }
+
+    // Organization specific validation
+    if (schemaType.includes('Organization')) {
+      if (!schema.name) {
+        issues.push('Missing organization name');
+        score -= 15;
+      }
+      if (!schema.url) {
+        issues.push('Missing organization URL');
+        score -= 10;
+      }
+    }
+
+    return {
+      score: Math.max(0, score),
+      issues: issues
+    };
   }
 
   extractHeaders($) {

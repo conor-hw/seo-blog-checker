@@ -63,12 +63,22 @@ class ConfigLoader {
   validateExtractionConfig(config) {
     const requiredFields = [
       'title', 'content', 'excerpt', 'meta_description', 
-      'keywords', 'author', 'date', 'categories', 'tags'
+      'keywords', 'url'
     ];
 
+    // Check basic required fields
     for (const field of requiredFields) {
-      if (typeof config[field] !== 'boolean') {
+      if (config[field] !== undefined && typeof config[field] !== 'boolean') {
         throw new Error(`Extraction config: '${field}' must be a boolean value`);
+      }
+    }
+
+    // Validate nested sections if they exist
+    const nestedSections = ['technical_seo', 'open_graph', 'twitter', 'schema', 'yoast_seo', 'wordpress_meta', 'content_analysis'];
+    
+    for (const section of nestedSections) {
+      if (config[section] && typeof config[section] !== 'object') {
+        throw new Error(`Extraction config: '${section}' must be an object`);
       }
     }
   }

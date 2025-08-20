@@ -4,11 +4,6 @@
   "excerpt": true,
   "meta_description": true,
   "keywords": true,
-  "author": false,
-  "date": false,
-  "categories": true,
-  "tags": true,
-  "featured_image": false,
   "url": true,
   "headers": true,
   "word_count": true,
@@ -61,12 +56,14 @@
   },
   
   "wordpress_meta": {
-    "post_status": false,
-    "post_type": false,
+    "post_status": true,
+    "post_type": true,
     "date_published": true,
     "date_modified": true,
-    "author_id": false,
-    "featured_media_id": false
+    "author_id": true,
+    "featured_media_id": true,
+    "categories": true,
+    "tags": true
   },
   
   "content_analysis": {
