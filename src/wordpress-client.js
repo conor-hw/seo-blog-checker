@@ -14,8 +14,10 @@ class WordPressClient {
       baseURL: this.baseUrl,
       timeout: 30000, // 30 seconds
       headers: {
-        'User-Agent': 'SEO-Blog-Checker/1.0.0',
-        'Accept': 'application/json'
+        'User-Agent': 'Hostelworld-SEO-Blog-Checker/1.0.0 (Internal Tool)',
+        'Accept': 'application/json',
+        'From': 'engineering@hostelworld.com',  // Identify ourselves
+        'Cache-Control': 'no-cache'  // Ensure we get fresh responses
       }
     });
   }
@@ -25,7 +27,7 @@ class WordPressClient {
    * @param {Object} identifier - Object with type ('slug' or 'id') and value
    * @returns {Promise<Object>} WordPress post data
    */
-  async getPost(identifier) {
+  async getPost(identifier, retryCount = 3, retryDelay = 30000) { // 30 seconds as requested by server
     try {
       let endpoint;
       
@@ -37,7 +39,33 @@ class WordPressClient {
         throw new Error(`Invalid identifier type: ${identifier.type}`);
       }
 
-      const response = await this.apiClient.get(endpoint);
+      console.log(`[WordPress] Fetching post from: ${this.baseUrl}${endpoint}`);
+      console.log(`[WordPress] Request headers:`, this.apiClient.defaults.headers);
+      console.log(`[WordPress] Attempts remaining: ${retryCount}`);
+      
+      try {
+        // First test the API endpoint
+        console.log('[WordPress] Testing API endpoint...');
+        await this.testConnection();
+        console.log('[WordPress] API endpoint test successful');
+      } catch (testError) {
+        console.error('[WordPress] API endpoint test failed:', testError.message);
+        if (retryCount > 0) {
+          console.log(`[WordPress] Retrying in ${retryDelay/1000} seconds...`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+          return this.getPost(identifier, retryCount - 1, retryDelay);
+        }
+        throw testError;
+      }
+
+      console.log('[WordPress] Sending post request...');
+      const response = await this.apiClient.get(endpoint, {
+        validateStatus: function (status) {
+          console.log(`[WordPress] Received status code: ${status}`);
+          return status >= 200 && status < 300;
+        },
+        timeout: 30000 // 30 seconds timeout
+      });
       
       // Handle slug-based queries which return an array
       let postData;
@@ -53,19 +81,45 @@ class WordPressClient {
       return this.normalizePostData(postData);
       
     } catch (error) {
+      console.error('[WordPress] Error details:', {
+        message: error.message,
+        code: error.code,
+        response: error.response ? {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          headers: error.response.headers,
+          data: error.response.data
+        } : null,
+        config: error.config ? {
+          url: error.config.url,
+          method: error.config.method,
+          headers: error.config.headers,
+          timeout: error.config.timeout
+        } : null
+      });
+
       if (error.response) {
         if (error.response.status === 404) {
           throw new Error(`Post not found: ${identifier.value}`);
         }
-        throw new Error(`WordPress API error (${error.response.status}): ${error.response.statusText}`);
+        if (error.response.status === 502) {
+          throw new Error(`WordPress API Gateway error (502). This could be due to:
+1. The WordPress site is temporarily down
+2. The site's server is overloaded
+3. Network connectivity issues
+Try again in a few minutes.`);
+        }
+        throw new Error(`WordPress API error (${error.response.status}): ${error.response.statusText}
+Response data: ${JSON.stringify(error.response.data, null, 2)}`);
       }
       if (error.code === 'ECONNREFUSED') {
-        throw new Error(`Cannot connect to WordPress site at ${this.baseUrl}`);
+        throw new Error(`Cannot connect to WordPress site at ${this.baseUrl}. Please check if the site is accessible.`);
       }
       if (error.code === 'ENOTFOUND') {
-        throw new Error(`WordPress site not found: ${this.baseUrl}`);
+        throw new Error(`WordPress site not found: ${this.baseUrl}. Please verify the URL is correct.`);
       }
-      throw error;
+      throw new Error(`WordPress API error: ${error.message}
+Stack trace: ${error.stack}`);
     }
   }
 
@@ -129,11 +183,33 @@ class WordPressClient {
    * Test the WordPress API connection
    * @returns {Promise<boolean>} True if connection is successful
    */
-  async testConnection() {
+  async testConnection(retryCount = 3, retryDelay = 30000) { // 30 seconds as requested by server
     try {
-      const response = await this.apiClient.get('/wp-json/');
+      console.log(`[WordPress] Testing connection to ${this.baseUrl}/wp-json/`);
+      const response = await this.apiClient.get('/wp-json/', {
+        timeout: 30000,
+        validateStatus: function (status) {
+          console.log(`[WordPress] Test connection status: ${status}`);
+          return status >= 200 && status < 300;
+        }
+      });
       return response.status === 200;
     } catch (error) {
+      console.error('[WordPress] Connection test error:', {
+        message: error.message,
+        code: error.code,
+        response: error.response ? {
+          status: error.response.status,
+          statusText: error.response.statusText
+        } : null
+      });
+
+      if (retryCount > 0) {
+        console.log(`[WordPress] Retrying connection test in ${retryDelay/1000} seconds... (${retryCount} attempts remaining)`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        return this.testConnection(retryCount - 1, retryDelay);
+      }
+      
       throw new Error(`WordPress API connection test failed: ${error.message}`);
     }
   }
