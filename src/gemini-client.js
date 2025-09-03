@@ -174,49 +174,59 @@ SCORING INSTRUCTIONS:
 - Apply the weighted formula: (EEAT × 0.20) + (Technical × 0.10) + (Relevance × 0.20) + (Text Quality × 0.10) + (AI Optimization × 0.25) + (Freshness × 0.15)
 - If Final Quality Score < ${threshold}, recommend "Optimize"
 
-Please provide your analysis in the following JSON format. IMPORTANT: Each score must be unique and based on your actual analysis:
+Please provide your analysis in the following JSON format. IMPORTANT:
+- Each score must be unique and based on your actual analysis
+- For scores >= 70, highlight what's working well and suggest ways to "turn up the good"
+- For scores < 70, focus on critical improvements needed
+
 {
   "eeat_score": {
     "score": null,  // Your score from 0-100 based on analysis
     "analysis": "Your detailed analysis of the content's authority and trustworthiness",
     "strengths": ["List actual strengths found"],
     "weaknesses": ["List actual weaknesses found"],
-    "recommendations": ["Specific, actionable recommendations with examples"]
+    "recommendations": ["Specific, actionable recommendations with examples"],
+    "enhancement_opportunities": ["If score >= 70, suggest ways to amplify what's already working well"]
   },
   "technical_score": {
     "score": null,  // Your score from 0-100 based on analysis
     "analysis": "Your analysis of technical SEO elements",
     "strengths": ["List actual strengths found"],
     "weaknesses": ["List actual weaknesses found"],
-    "recommendations": ["Specific, actionable recommendations with examples"]
+    "recommendations": ["Specific, actionable recommendations with examples"],
+    "enhancement_opportunities": ["If score >= 70, suggest ways to amplify what's already working well"]
   },
   "relevance_score": {
     "score": null,  // Your score from 0-100 based on analysis
     "analysis": "Your analysis of content relevance",
     "strengths": ["List actual strengths found"],
     "weaknesses": ["List actual weaknesses found"],
-    "recommendations": ["Specific, actionable recommendations with examples"]
+    "recommendations": ["Specific, actionable recommendations with examples"],
+    "enhancement_opportunities": ["If score >= 70, suggest ways to amplify what's already working well"]
   },
   "text_quality_score": {
     "score": null,  // Your score from 0-100 based on analysis
     "analysis": "Your analysis of writing quality",
     "strengths": ["List actual strengths found"],
     "weaknesses": ["List actual weaknesses found"],
-    "recommendations": ["Specific, actionable recommendations with examples"]
+    "recommendations": ["Specific, actionable recommendations with examples"],
+    "enhancement_opportunities": ["If score >= 70, suggest ways to amplify what's already working well"]
   },
   "ai_optimization_score": {
     "score": null,  // Your score from 0-100 based on analysis
     "analysis": "Your analysis of AI-readiness",
     "strengths": ["List actual strengths found"],
     "weaknesses": ["List actual weaknesses found"],
-    "recommendations": ["Specific, actionable recommendations with examples"]
+    "recommendations": ["Specific, actionable recommendations with examples"],
+    "enhancement_opportunities": ["If score >= 70, suggest ways to amplify what's already working well"]
   },
   "freshness_score": {
     "score": null,  // Your score from 0-100 based on analysis
     "analysis": "Your analysis of content freshness",
     "strengths": ["List actual strengths found"],
     "weaknesses": ["List actual weaknesses found"],
-    "recommendations": ["Specific, actionable recommendations with examples"]
+    "recommendations": ["Specific, actionable recommendations with examples"],
+    "enhancement_opportunities": ["If score >= 70, suggest ways to amplify what's already working well"]
   },
   "overall_score": null,  // Calculate this using the weighted formula above
   "optimization_recommendation": "Optimize or Keep based on threshold",

@@ -117,9 +117,21 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
       insights += ` Schema markup is present (${content.schema.length} types found), which helps search engines understand the content structure.`;
     }
 
-    // Add recommendations with assertive language
-    if (eeatData.recommendations && eeatData.recommendations.length > 0) {
-      insights += '\n\n**EEAT Actions Required:**\n';
+    // Add recommendations or enhancements based on score
+    if (score >= 70) {
+      insights += '\n\n**What\'s Working Well:**\n';
+      eeatData.strengths.forEach((strength, index) => {
+        insights += `${index + 1}. ${strength}\n`;
+      });
+      
+      if (eeatData.enhancement_opportunities && eeatData.enhancement_opportunities.length > 0) {
+        insights += '\n**Ways to Turn Up the Good:**\n';
+        eeatData.enhancement_opportunities.forEach((opp, index) => {
+          insights += `${index + 1}. ${opp}\n`;
+        });
+      }
+    } else if (eeatData.recommendations && eeatData.recommendations.length > 0) {
+      insights += '\n\n**Critical EEAT Actions Required:**\n';
       eeatData.recommendations.forEach((rec, index) => {
         insights += `${index + 1}. ${this.makeAssertive(rec)}\n`;
       });
@@ -196,9 +208,21 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
       }
     }
 
-    // Add recommendations with assertive language
-    if (techData.recommendations && techData.recommendations.length > 0) {
-      insights += '\n**Technical Fixes Required:**\n';
+    // Add recommendations or enhancements based on score
+    if (score >= 70) {
+      insights += '\n\n**What\'s Working Well:**\n';
+      techData.strengths.forEach((strength, index) => {
+        insights += `${index + 1}. ${strength}\n`;
+      });
+      
+      if (techData.enhancement_opportunities && techData.enhancement_opportunities.length > 0) {
+        insights += '\n**Ways to Turn Up the Good:**\n';
+        techData.enhancement_opportunities.forEach((opp, index) => {
+          insights += `${index + 1}. ${opp}\n`;
+        });
+      }
+    } else if (techData.recommendations && techData.recommendations.length > 0) {
+      insights += '\n**Critical Technical Fixes Required:**\n';
       techData.recommendations.forEach((rec, index) => {
         insights += `${index + 1}. ${this.makeAssertive(rec)}\n`;
       });
@@ -238,8 +262,21 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
       }
     }
 
-    if (relevanceData.recommendations && relevanceData.recommendations.length > 0) {
-      insights += '\n\n**Relevance Actions Required:**\n';
+    // Add recommendations or enhancements based on score
+    if (score >= 70) {
+      insights += '\n\n**What\'s Working Well:**\n';
+      relevanceData.strengths.forEach((strength, index) => {
+        insights += `${index + 1}. ${strength}\n`;
+      });
+      
+      if (relevanceData.enhancement_opportunities && relevanceData.enhancement_opportunities.length > 0) {
+        insights += '\n**Ways to Turn Up the Good:**\n';
+        relevanceData.enhancement_opportunities.forEach((opp, index) => {
+          insights += `${index + 1}. ${opp}\n`;
+        });
+      }
+    } else if (relevanceData.recommendations && relevanceData.recommendations.length > 0) {
+      insights += '\n\n**Critical Relevance Actions Required:**\n';
       relevanceData.recommendations.forEach((rec, index) => {
         insights += `${index + 1}. ${this.makeAssertive(rec)}\n`;
       });
@@ -281,8 +318,21 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
       }
     }
 
-    if (textData.recommendations && textData.recommendations.length > 0) {
-      insights += '\n\n**Text Quality Fixes Required:**\n';
+    // Add recommendations or enhancements based on score
+    if (score >= 70) {
+      insights += '\n\n**What\'s Working Well:**\n';
+      textData.strengths.forEach((strength, index) => {
+        insights += `${index + 1}. ${strength}\n`;
+      });
+      
+      if (textData.enhancement_opportunities && textData.enhancement_opportunities.length > 0) {
+        insights += '\n**Ways to Turn Up the Good:**\n';
+        textData.enhancement_opportunities.forEach((opp, index) => {
+          insights += `${index + 1}. ${opp}\n`;
+        });
+      }
+    } else if (textData.recommendations && textData.recommendations.length > 0) {
+      insights += '\n\n**Critical Text Quality Fixes Required:**\n';
       textData.recommendations.forEach((rec, index) => {
         insights += `${index + 1}. ${this.makeAssertive(rec)}\n`;
       });
@@ -331,8 +381,21 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
       }
     }
 
-    if (aiData.recommendations && aiData.recommendations.length > 0) {
-      insights += '\n\n**AI Optimization Actions Required:**\n';
+    // Add recommendations or enhancements based on score
+    if (score >= 70) {
+      insights += '\n\n**What\'s Working Well:**\n';
+      aiData.strengths.forEach((strength, index) => {
+        insights += `${index + 1}. ${strength}\n`;
+      });
+      
+      if (aiData.enhancement_opportunities && aiData.enhancement_opportunities.length > 0) {
+        insights += '\n**Ways to Turn Up the Good:**\n';
+        aiData.enhancement_opportunities.forEach((opp, index) => {
+          insights += `${index + 1}. ${opp}\n`;
+        });
+      }
+    } else if (aiData.recommendations && aiData.recommendations.length > 0) {
+      insights += '\n\n**Critical AI Optimization Actions Required:**\n';
       aiData.recommendations.forEach((rec, index) => {
         insights += `${index + 1}. ${this.makeAssertive(rec)}\n`;
       });
@@ -375,8 +438,21 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
       }
     }
 
-    if (freshnessData.recommendations && freshnessData.recommendations.length > 0) {
-      insights += '\n\n**Freshness Actions Required:**\n';
+    // Add recommendations or enhancements based on score
+    if (score >= 70) {
+      insights += '\n\n**What\'s Working Well:**\n';
+      freshnessData.strengths.forEach((strength, index) => {
+        insights += `${index + 1}. ${strength}\n`;
+      });
+      
+      if (freshnessData.enhancement_opportunities && freshnessData.enhancement_opportunities.length > 0) {
+        insights += '\n**Ways to Turn Up the Good:**\n';
+        freshnessData.enhancement_opportunities.forEach((opp, index) => {
+          insights += `${index + 1}. ${opp}\n`;
+        });
+      }
+    } else if (freshnessData.recommendations && freshnessData.recommendations.length > 0) {
+      insights += '\n\n**Critical Freshness Actions Required:**\n';
       freshnessData.recommendations.forEach((rec, index) => {
         insights += `${index + 1}. ${this.makeAssertive(rec)}\n`;
       });
