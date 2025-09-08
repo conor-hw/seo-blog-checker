@@ -17,22 +17,6 @@ class GeminiClient {
     });
   }
 
-  /**
-   * Evaluate content using Gemini AI
-   * @param {Object} extractedContent - Extracted content from WordPress
-   * @param {Object} evaluationConfig - Evaluation configuration
-   * @returns {Promise<Object>} Evaluation results
-   */
-  // Required metrics for validation
-  requiredMetrics = [
-    'eeat_score',
-    'technical_score',
-    'relevance_score',
-    'text_quality_score',
-    'ai_optimization_score',
-    'freshness_score'
-  ];
-
   async evaluate(extractedContent, evaluationConfig) {
     try {
       console.log('[Gemini] Building evaluation prompt...');
@@ -57,14 +41,11 @@ class GeminiClient {
       console.log('[Gemini] Raw response text:', response.candidates?.[0]?.content?.parts?.[0]?.text);
       
       console.log('[Gemini] Parsing response...');
-      const evaluation = this.parseEvaluationResponse(response, evaluationConfig);
+      const evaluation = this.parseEvaluationResponse(response);
       
       console.log('[Gemini] Evaluation scores:', {
         overall: evaluation.overall_score,
-        metrics: this.requiredMetrics.map(metric => ({
-          name: metric,
-          score: evaluation[metric]?.score
-        }))
+        scores: evaluation.scores
       });
 
       return evaluation;
@@ -78,242 +59,50 @@ class GeminiClient {
     }
   }
 
-  /**
-   * Build evaluation prompt for Gemini AI
-   * @param {Object} extractedContent - Extracted content
-   * @param {Object} evaluationConfig - Evaluation configuration
-   * @returns {string} Formatted prompt
-   */
-  buildEvaluationPrompt(extractedContent, evaluationConfig) {
-    const isHostelworld = evaluationConfig.output_format?.report_type === 'hostelworld';
-    
-    if (isHostelworld) {
-      return this.buildHostelworldPrompt(extractedContent, evaluationConfig);
-    } else {
-      return this.buildGenericPrompt(extractedContent, evaluationConfig);
-    }
-  }
-
-  /**
-   * Build Hostelworld-specific evaluation prompt
-   * @param {Object} extractedContent - Extracted content
-   * @param {Object} evaluationConfig - Evaluation configuration
-   * @returns {string} Formatted prompt
-   */
-  buildHostelworldPrompt(extractedContent, evaluationConfig) {
-    const criteria = evaluationConfig.evaluation_criteria;
-    const threshold = evaluationConfig.output_format.optimization_threshold || 75;
-    
-    let prompt = `You are an SEO expert specializing in Hostelworld blog content evaluation. Please evaluate the following blog post using the Hostelworld-specific criteria.
+  buildEvaluationPrompt(extractedContent) {
+    return `You are an SEO expert evaluating Hostelworld blog content. Analyze this post and provide specific, actionable feedback.
 
 CONTENT TO ANALYZE:
-Title: ${extractedContent.title || 'N/A'}
-Content: ${extractedContent.content || 'N/A'}
-Meta Description: ${extractedContent.meta_description || 'N/A'}
-Keywords: ${extractedContent.keywords ? extractedContent.keywords.join(', ') : 'N/A'}
-URL: ${extractedContent.url || 'N/A'}
-
-HOSTELWORLD EVALUATION CRITERIA:
-`;
-
-    // Add Hostelworld-specific criteria
-    for (const criterion of criteria) {
-      const criterionName = Object.keys(criterion)[0];
-      const criterionConfig = criterion[criterionName];
-      
-      prompt += `\n${criterionConfig.description} (Weight: ${criterionConfig.weight * 100}%)\n`;
-      
-      switch (criterionName) {
-        case 'eeat_score':
-          prompt += `- Real user quotes or experiences\n`;
-          prompt += `- UGC or traveller contributions\n`;
-          prompt += `- Specialist insights (local guides, HW experts)\n`;
-          prompt += `- HW brand confidence markers (proprietary data, staff recommendations)\n`;
-          prompt += `- Author/attribution or source references\n`;
-          break;
-        case 'technical_score':
-          prompt += `- Metadata present and optimized\n`;
-          prompt += `- Logical heading structure (H1-H3)\n`;
-          prompt += `- No broken internal or external links\n`;
-          prompt += `- Schema, canonical, and hreflang present\n`;
-          prompt += `- Proper internal linking to HW pages\n`;
-          break;
-        case 'relevance_score':
-          prompt += `- Answers top queries or relevant search topics\n`;
-          prompt += `- Matches Gen Z interests (tone, hostels, experiences)\n`;
-          prompt += `- Adds genuine value: what to do, where to go, what to expect\n`;
-          prompt += `- Covers the topic comprehensively, not shallowly\n`;
-          break;
-        case 'text_quality_score':
-          prompt += `- Correct grammar and spelling\n`;
-          prompt += `- Clear formatting (short paras, bullets)\n`;
-          prompt += `- Localized terms or translations used naturally\n`;
-          prompt += `- Consistent Gen Z-appropriate tone and readability\n`;
-          break;
-        case 'ai_optimization_score':
-          prompt += `- Includes structured FAQs or common questions\n`;
-          prompt += `- Targets long-tail or intent-specific keywords\n`;
-          prompt += `- Clean use of headings, lists, answer formats\n`;
-          prompt += `- Designed for snippet or voice search use\n`;
-          prompt += `- Opportunities for AI-based content enrichment\n`;
-          break;
-        case 'freshness_score':
-          prompt += `- Updated within the last 6-12 months\n`;
-          prompt += `- Reflects current events, travel conditions, prices\n`;
-          prompt += `- Avoids references to outdated years\n`;
-          prompt += `- Links point to current pages\n`;
-          prompt += `- Reflects seasonal accuracy\n`;
-          break;
-      }
-    }
-
-    prompt += `
-
-SCORING INSTRUCTIONS:
-- Score each dimension on a 0-100 scale
-- Apply the weighted formula: (EEAT × 0.20) + (Technical × 0.10) + (Relevance × 0.20) + (Text Quality × 0.10) + (AI Optimization × 0.25) + (Freshness × 0.15)
-- If Final Quality Score < ${threshold}, recommend "Optimize"
-
-Please provide your analysis in the following JSON format. IMPORTANT:
-- Each score must be unique and based on your actual analysis
-- For scores >= 70, highlight what's working well and suggest improvement opportunities
-- For scores < 70, focus on critical improvements needed
-
-{
-  "eeat_score": {
-    "score": null,  // Your score from 0-100 based on analysis
-    "analysis": "Your detailed analysis of the content's authority and trustworthiness",
-    "strengths": ["List actual strengths found"],
-    "weaknesses": ["List actual weaknesses found"],
-    "recommendations": ["Specific, actionable recommendations with examples"],
-    "enhancement_opportunities": ["If score >= 70, suggest ways to amplify what's already working well"]
-  },
-  "technical_score": {
-    "score": null,  // Your score from 0-100 based on analysis
-    "analysis": "Your analysis of technical SEO elements",
-    "strengths": ["List actual strengths found"],
-    "weaknesses": ["List actual weaknesses found"],
-    "recommendations": ["Specific, actionable recommendations with examples"],
-    "enhancement_opportunities": ["If score >= 70, suggest ways to amplify what's already working well"]
-  },
-  "relevance_score": {
-    "score": null,  // Your score from 0-100 based on analysis
-    "analysis": "Your analysis of content relevance",
-    "strengths": ["List actual strengths found"],
-    "weaknesses": ["List actual weaknesses found"],
-    "recommendations": ["Specific, actionable recommendations with examples"],
-    "enhancement_opportunities": ["If score >= 70, suggest ways to amplify what's already working well"]
-  },
-  "text_quality_score": {
-    "score": null,  // Your score from 0-100 based on analysis
-    "analysis": "Your analysis of writing quality",
-    "strengths": ["List actual strengths found"],
-    "weaknesses": ["List actual weaknesses found"],
-    "recommendations": ["Specific, actionable recommendations with examples"],
-    "enhancement_opportunities": ["If score >= 70, suggest ways to amplify what's already working well"]
-  },
-  "ai_optimization_score": {
-    "score": null,  // Your score from 0-100 based on analysis
-    "analysis": "Your analysis of AI-readiness",
-    "strengths": ["List actual strengths found"],
-    "weaknesses": ["List actual weaknesses found"],
-    "recommendations": ["Specific, actionable recommendations with examples"],
-    "enhancement_opportunities": ["If score >= 70, suggest ways to amplify what's already working well"]
-  },
-  "freshness_score": {
-    "score": null,  // Your score from 0-100 based on analysis
-    "analysis": "Your analysis of content freshness",
-    "strengths": ["List actual strengths found"],
-    "weaknesses": ["List actual weaknesses found"],
-    "recommendations": ["Specific, actionable recommendations with examples"],
-    "enhancement_opportunities": ["If score >= 70, suggest ways to amplify what's already working well"]
-  },
-  "overall_score": null,  // Calculate this using the weighted formula above
-  "optimization_recommendation": "Optimize or Keep based on threshold",
-  "summary": "Brief summary of key findings and most critical improvements needed",
-  "priority_recommendations": [
-    "Top 3 most impactful recommendations with specific examples"
-  ]
-}
-
-Focus on Hostelworld-specific insights and Gen Z audience considerations.`;
-
-    return prompt;
-  }
-
-  /**
-   * Build generic evaluation prompt (existing functionality)
-   * @param {Object} extractedContent - Extracted content
-   * @param {Object} evaluationConfig - Evaluation configuration
-   * @returns {string} Formatted prompt
-   */
-  buildGenericPrompt(extractedContent, evaluationConfig) {
-    // Existing generic prompt logic
-    const criteria = evaluationConfig.evaluation_criteria;
-    
-    let prompt = `You are an SEO expert analyzing a blog post. Please evaluate the following content and provide a detailed SEO analysis.
-
-CONTENT TO ANALYZE:
-Title: ${extractedContent.title || 'N/A'}
-Content: ${extractedContent.content || 'N/A'}
-Meta Description: ${extractedContent.meta_description || 'N/A'}
-Keywords: ${extractedContent.keywords ? extractedContent.keywords.join(', ') : 'N/A'}
+Title: ${extractedContent.title || 'Not found'}
+Content: ${extractedContent.content || 'Not found'}
+Meta Description: ${extractedContent.meta_description || 'Not found'}
+Keywords: ${extractedContent.keywords ? extractedContent.keywords.join(', ') : 'Not found'}
+URL: ${extractedContent.url || 'Not found'}
+Last Modified: ${extractedContent.last_modified || 'Not found'}
 
 EVALUATION CRITERIA:
-`;
+- EEAT (20%): Expert authority, user experiences, Hostelworld brand integration
+- Technical SEO (10%): Metadata, structure, internal linking
+- Relevance (20%): Search intent match, comprehensive coverage
+- Text Quality (10%): Writing style, readability, formatting
+- AI Optimization (25%): Featured snippets, voice search, structured data
+- Freshness (15%): Current information, seasonal relevance
 
-    for (const criterion of criteria) {
-      const criterionName = Object.keys(criterion)[0];
-      const criterionConfig = criterion[criterionName];
-      
-      prompt += `- ${criterionName}: `;
-      
-      switch (criterionName) {
-        case 'keyword_density':
-          prompt += `Target density: ${criterionConfig.target}%, Weight: ${criterionConfig.weight}\n`;
-          break;
-        case 'readability':
-          prompt += `Target score: ${criterionConfig.target_score}, Weight: ${criterionConfig.weight}\n`;
-          break;
-        case 'heading_structure':
-          prompt += `Required levels: ${criterionConfig.required_levels.join(', ')}, Weight: ${criterionConfig.weight}\n`;
-          break;
-        case 'meta_tags':
-          prompt += `Required tags: ${criterionConfig.required.join(', ')}, Weight: ${criterionConfig.weight}\n`;
-          break;
-        case 'content_length':
-          prompt += `Min words: ${criterionConfig.min_words}, Max words: ${criterionConfig.max_words}, Weight: ${criterionConfig.weight}\n`;
-          break;
-      }
-    }
+IMPORTANT GUIDELINES:
+1. Flag any missing metadata - don't assume it exists
+2. Give specific examples in all recommendations
+3. Include point values for improvements
+4. Analyze high-scoring sections too
+5. Keep feedback clear and actionable
 
-    prompt += `
+Return a SINGLE JSON object in this EXACT format (no other text):
 
-Please provide your analysis in the following JSON format:
 {
-  "overall_score": 85,
-  "evaluations": {
-    "keyword_density": {
-      "score": 80,
-      "analysis": "Analysis text here",
-      "recommendations": ["Recommendation 1", "Recommendation 2"]
-    }
+  "scores": {
+    "eeat": 75,
+    "technical": 80,
+    "relevance": 85,
+    "quality": 90,
+    "ai_ready": 70,
+    "freshness": 65
   },
-  "summary": "Overall summary of the content's SEO performance",
-  "recommendations": ["Top recommendation 1", "Top recommendation 2"]
-}
-
-Focus on providing actionable insights and specific recommendations for improvement.
-`;
-
-    return prompt;
+  "overall_score": 77.5,
+  "strengths": ["Clear heading structure", "Good keyword coverage"],
+  "improvements": ["Add author bio (+10)", "Update prices (+5)"],
+  "priority": "medium"
+}`;
   }
 
-  /**
-   * Send request to Gemini API
-   * @param {string} prompt - Evaluation prompt
-   * @returns {Promise<Object>} API response
-   */
   async sendRequest(prompt) {
     const requestData = {
       contents: [{
@@ -362,15 +151,14 @@ Focus on providing actionable insights and specific recommendations for improvem
         }
         if (error.response.status === 400) {
           const errorMsg = error.response.data.error?.message || 'Invalid request';
-          throw new Error(`Gemini API request failed: ${errorMsg}\nRequest data: ${JSON.stringify(error.response.data, null, 2)}`);
+          throw new Error(`Gemini API request failed: ${errorMsg}`);
         }
         if (error.response.status === 404) {
           throw new Error(`Gemini API endpoint not found. Please check the API key and endpoint URL.`);
         }
-        throw new Error(`Gemini API error (${error.response.status}): ${error.response.statusText}\nResponse: ${JSON.stringify(error.response.data, null, 2)}`);
+        throw new Error(`Gemini API error (${error.response.status}): ${error.response.statusText}`);
       }
 
-      // Handle network errors
       if (error.code === 'ECONNREFUSED') {
         throw new Error(`Cannot connect to Gemini API. Please check your internet connection.`);
       }
@@ -382,74 +170,92 @@ Focus on providing actionable insights and specific recommendations for improvem
     }
   }
 
-  /**
-   * Parse Gemini API response
-   * @param {Object} response - Raw API response
-   * @param {Object} evaluationConfig - Evaluation configuration
-   * @returns {Object} Parsed evaluation results
-   */
-  parseEvaluationResponse(response, evaluationConfig) {
+  parseEvaluationResponse(response) {
     try {
       const text = response.candidates[0].content.parts[0].text;
+      console.log('[Gemini] Raw response text:', text);
       
       // Extract JSON from the response
+      let jsonStr = text.trim();
+      
+      // If there's text before/after the JSON, extract just the JSON
       const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No valid JSON found in Gemini response');
+      if (jsonMatch) {
+        jsonStr = jsonMatch[0];
       }
 
-      const evaluation = JSON.parse(jsonMatch[0]);
+      // Basic cleanup
+      jsonStr = jsonStr
+        // Remove all comments
+        .replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '')
+        // Remove non-printable characters
+        .replace(/[\x00-\x1F\x7F-\x9F]/g, '')
+        // Normalize whitespace
+        .replace(/\s+/g, ' ')
+        // Fix arrays with missing commas
+        .replace(/"\s*\]/g, '"]')
+        .replace(/(\[\s*"[^"]+")(\s*")/g, '$1,$2');
+
+      // Ensure arrays are properly formatted
+      let depth = 0;
+      let inString = false;
+      let inArray = false;
+      let lastChar = '';
+      let result = '';
+
+      for (let i = 0; i < jsonStr.length; i++) {
+        const char = jsonStr[i];
+        
+        // Handle strings
+        if (char === '"' && lastChar !== '\\') {
+          inString = !inString;
+        }
+        
+        // Only process special characters outside strings
+        if (!inString) {
+          if (char === '[') {
+            depth++;
+            inArray = true;
+          } else if (char === ']') {
+            depth--;
+            inArray = depth > 0;
+          } else if (inArray && char === '"' && jsonStr[i-1] === '"') {
+            // Add missing comma between array elements
+            result += ',';
+          }
+        }
+        
+        result += char;
+        lastChar = char;
+      }
+
+      jsonStr = result;
+      console.log('[Gemini] Cleaned JSON:', jsonStr);
       
-      // Validate required metrics exist
-      const missingMetrics = this.requiredMetrics.filter(metric => !evaluation[metric]);
-      if (missingMetrics.length > 0) {
-        console.error('[Gemini] Missing required metrics:', missingMetrics);
-        throw new Error(`Invalid response structure - missing metrics: ${missingMetrics.join(', ')}`);
-      }
-      
-      // Validate scores
-      const scores = this.requiredMetrics.map(metric => ({
-        name: metric,
-        score: evaluation[metric]?.score
-      }));
-      
-      // Check for null scores
-      const nullScores = scores.filter(s => s.score === null);
-      if (nullScores.length > 0) {
-        throw new Error(`Invalid scores - found null values in: ${nullScores.map(s => s.name).join(', ')}`);
-      }
+      const evaluation = JSON.parse(jsonStr);
 
-      // Check for identical scores
-      const uniqueScores = new Set(scores.map(s => s.score));
-      if (uniqueScores.size < scores.length) {
-        console.warn('[Gemini] Warning: Found identical scores across metrics. This is unlikely and may indicate an issue with the analysis.');
+      // Calculate overall score if not provided
+      if (!evaluation.overall_score) {
+        const weights = {
+          eeat: 0.20,
+          technical: 0.10,
+          relevance: 0.20,
+          quality: 0.10,
+          ai_ready: 0.25,
+          freshness: 0.15
+        };
+
+        evaluation.overall_score = Object.entries(weights).reduce((sum, [key, weight]) => {
+          return sum + (evaluation.scores[key] * weight);
+        }, 0);
       }
 
-      // Validate overall score calculation
-      const weights = {
-        'eeat_score': 0.20,
-        'technical_score': 0.10,
-        'relevance_score': 0.20,
-        'text_quality_score': 0.10,
-        'ai_optimization_score': 0.25,
-        'freshness_score': 0.15
-      };
-
-      const calculatedScore = scores.reduce((sum, {name, score}) => {
-        const weight = weights[name] || 0;
-        return sum + (score * weight);
-      }, 0);
-
-      const roundedCalculated = Math.round(calculatedScore * 10) / 10;
-      if (Math.abs(roundedCalculated - evaluation.overall_score) > 0.1) {
-        console.warn(`[Gemini] Score calculation mismatch. API returned: ${evaluation.overall_score}, Calculated: ${roundedCalculated}`);
-        evaluation.overall_score = roundedCalculated;  // Use our calculation instead
+      // Set priority if not provided
+      if (!evaluation.priority) {
+        if (evaluation.overall_score < 60) evaluation.priority = 'high';
+        else if (evaluation.overall_score < 75) evaluation.priority = 'medium';
+        else evaluation.priority = 'low';
       }
-      
-      // Add metadata
-      evaluation.timestamp = new Date().toISOString();
-      evaluation.model = 'gemini-1.5-flash';
-      evaluation.config_used = evaluationConfig;
 
       return evaluation;
     } catch (error) {
@@ -457,10 +263,6 @@ Focus on providing actionable insights and specific recommendations for improvem
     }
   }
 
-  /**
-   * Test Gemini API connection
-   * @returns {Promise<boolean>} True if connection is successful
-   */
   async testConnection() {
     try {
       const testPrompt = "Please respond with 'OK' if you can read this message.";
