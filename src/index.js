@@ -17,6 +17,7 @@ import ContentExtractor from './content-extractor.js';
 import ReportGenerator from './report-generator.js';
 import ConfigLoader from './config-loader.js';
 import UniversalScraper from './universal-scraper.js';
+import CSVWriter from './utils/csv-writer.js';
 
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -58,6 +59,10 @@ program
       const contentExtractor = new ContentExtractor(extractionConfig);
       const reportGenerator = new ReportGenerator(evaluationConfig);
       
+      // Initialize CSV writer
+      const csvWriter = new CSVWriter(path.join('reports', 'seo_analysis_summary.csv'));
+      await csvWriter.initialize();
+      
       spinner.text = 'Processing blog posts...';
       
       // Get post identifiers
@@ -97,7 +102,7 @@ program
         
         try {
           const batchResults = await Promise.allSettled(
-            batch.map(identifier => processSinglePost(identifier, wordpressClient, geminiClient, contentExtractor, reportGenerator))
+            batch.map(identifier => processSinglePost(identifier, wordpressClient, geminiClient, contentExtractor, reportGenerator, csvWriter))
           );
           
           batchResults.forEach((result, index) => {
@@ -204,7 +209,7 @@ async function loadSlugsFromFile(filePath) {
  * @param {ReportGenerator} reportGenerator - Report generator
  * @returns {Promise<Object>} Processing result
  */
-async function processSinglePost(identifier, wordpressClient, geminiClient, contentExtractor, reportGenerator) {
+async function processSinglePost(identifier, wordpressClient, geminiClient, contentExtractor, reportGenerator, csvWriter) {
   try {
     console.log(`Processing ${identifier.value}...`);
     
@@ -234,13 +239,39 @@ async function processSinglePost(identifier, wordpressClient, geminiClient, cont
     console.log('Saving report...');
     await reportGenerator.save(report, identifier.value);
     
-    return {
+    // Extract top strengths and critical issues
+    const topStrengths = Object.entries(evaluation)
+      .filter(([key, data]) => key.endsWith('_score') && typeof data === 'object' && data.score >= 70)
+      .map(([_, data]) => data.strengths?.[0])
+      .filter(Boolean)
+      .slice(0, 3);
+
+    const criticalIssues = Object.entries(evaluation)
+      .filter(([key, data]) => key.endsWith('_score') && typeof data === 'object' && data.score < 70)
+      .map(([_, data]) => data.recommendations?.[0])
+      .filter(Boolean)
+      .slice(0, 3);
+
+    // Prepare result object
+    const result = {
       slug: identifier.value,
+      url: extractedContent.url,
       title: extractedContent.title,
       overall_score: evaluation.overall_score,
-      optimization_recommendation: evaluation.optimization_recommendation,
+      top_strengths: topStrengths,
+      critical_issues: criticalIssues,
+      word_count: extractedContent.word_count,
+      last_updated: extractedContent.last_modified,
       report_path: `reports/${identifier.value}/seo-analysis-report.md`
     };
+
+    // Write to CSV
+    if (csvWriter) {
+      console.log('Writing to CSV summary...');
+      await csvWriter.appendResult(result);
+    }
+    
+    return result;
   } catch (error) {
     console.error('Error in processSinglePost:', error);
     throw new Error(`Failed to process ${identifier.value}: ${error.message}`);

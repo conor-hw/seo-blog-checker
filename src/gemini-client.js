@@ -176,7 +176,7 @@ SCORING INSTRUCTIONS:
 
 Please provide your analysis in the following JSON format. IMPORTANT:
 - Each score must be unique and based on your actual analysis
-- For scores >= 70, highlight what's working well and suggest ways to "turn up the good"
+- For scores >= 70, highlight what's working well and suggest improvement opportunities
 - For scores < 70, focus on critical improvements needed
 
 {

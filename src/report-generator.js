@@ -125,7 +125,7 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
       });
       
       if (eeatData.enhancement_opportunities && eeatData.enhancement_opportunities.length > 0) {
-        insights += '\n**Ways to Turn Up the Good:**\n';
+        insights += '\n**Improvement Opportunities:**\n';
         eeatData.enhancement_opportunities.forEach((opp, index) => {
           insights += `${index + 1}. ${opp}\n`;
         });
@@ -216,7 +216,7 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
       });
       
       if (techData.enhancement_opportunities && techData.enhancement_opportunities.length > 0) {
-        insights += '\n**Ways to Turn Up the Good:**\n';
+        insights += '\n**Improvement Opportunities:**\n';
         techData.enhancement_opportunities.forEach((opp, index) => {
           insights += `${index + 1}. ${opp}\n`;
         });
@@ -270,7 +270,7 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
       });
       
       if (relevanceData.enhancement_opportunities && relevanceData.enhancement_opportunities.length > 0) {
-        insights += '\n**Ways to Turn Up the Good:**\n';
+        insights += '\n**Improvement Opportunities:**\n';
         relevanceData.enhancement_opportunities.forEach((opp, index) => {
           insights += `${index + 1}. ${opp}\n`;
         });
@@ -326,7 +326,7 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
       });
       
       if (textData.enhancement_opportunities && textData.enhancement_opportunities.length > 0) {
-        insights += '\n**Ways to Turn Up the Good:**\n';
+        insights += '\n**Improvement Opportunities:**\n';
         textData.enhancement_opportunities.forEach((opp, index) => {
           insights += `${index + 1}. ${opp}\n`;
         });
@@ -389,7 +389,7 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
       });
       
       if (aiData.enhancement_opportunities && aiData.enhancement_opportunities.length > 0) {
-        insights += '\n**Ways to Turn Up the Good:**\n';
+        insights += '\n**Improvement Opportunities:**\n';
         aiData.enhancement_opportunities.forEach((opp, index) => {
           insights += `${index + 1}. ${opp}\n`;
         });
@@ -446,7 +446,7 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
       });
       
       if (freshnessData.enhancement_opportunities && freshnessData.enhancement_opportunities.length > 0) {
-        insights += '\n**Ways to Turn Up the Good:**\n';
+        insights += '\n**Improvement Opportunities:**\n';
         freshnessData.enhancement_opportunities.forEach((opp, index) => {
           insights += `${index + 1}. ${opp}\n`;
         });
