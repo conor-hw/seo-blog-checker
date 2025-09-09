@@ -38,20 +38,20 @@ class ContentExtractor {
       content: this.stripHtml(wordpressData.content?.rendered || wordpressData.content || ''),
       content_html: wordpressData.content?.rendered || wordpressData.content || '',
       excerpt: this.stripHtml(wordpressData.excerpt?.rendered || wordpressData.excerpt || ''),
-      meta_description: wordpressData.meta?._yoast_wpseo_metadesc || '',
-      keywords: wordpressData.meta?._yoast_wpseo_focuskw ? [wordpressData.meta._yoast_wpseo_focuskw] : [],
+      meta_description: wordpressData.yoast_head_json?.description || wordpressData.meta?._yoast_wpseo_metadesc || '',
+      keywords: wordpressData.yoast_head_json?.keywords || (wordpressData.meta?._yoast_wpseo_focuskw ? [wordpressData.meta._yoast_wpseo_focuskw] : []),
       headers: this.extractHeadings(wordpressData.content?.rendered || ''),
       word_count: this.getWordCount(wordpressData.content?.rendered || ''),
       
       // Enhanced WordPress/Yoast SEO data
       yoast_seo_score: wordpressData.meta?._yoast_wpseo_linkdex || '',
       yoast_readability_score: wordpressData.meta?._yoast_wpseo_content_score || '',
-      yoast_focus_keyword: wordpressData.meta?._yoast_wpseo_focuskw || '',
-      yoast_seo_title: wordpressData.meta?._yoast_wpseo_title || '',
-      yoast_canonical: wordpressData.meta?._yoast_wpseo_canonical || '',
-      yoast_noindex: wordpressData.meta?._yoast_wpseo_meta_robots_noindex || '',
-      yoast_nofollow: wordpressData.meta?._yoast_wpseo_meta_robots_nofollow || '',
-      primary_category: wordpressData.meta?._yoast_wpseo_primary_category || '',
+      yoast_focus_keyword: wordpressData.yoast_head_json?.focus_keywords || wordpressData.meta?._yoast_wpseo_focuskw || '',
+      yoast_seo_title: wordpressData.yoast_head_json?.title || wordpressData.meta?._yoast_wpseo_title || '',
+      yoast_canonical: wordpressData.yoast_head_json?.canonical || wordpressData.meta?._yoast_wpseo_canonical || '',
+      yoast_noindex: wordpressData.yoast_head_json?.robots?.index === 'noindex' || wordpressData.meta?._yoast_wpseo_meta_robots_noindex === '1' || false,
+      yoast_nofollow: wordpressData.yoast_head_json?.robots?.follow === 'nofollow' || wordpressData.meta?._yoast_wpseo_meta_robots_nofollow === '1' || false,
+      primary_category: wordpressData.yoast_head_json?.primary_category || wordpressData.meta?._yoast_wpseo_primary_category || '',
       
       // WordPress post metadata
       post_status: wordpressData.status || '',
@@ -68,15 +68,15 @@ class ContentExtractor {
       
       // Extract additional meta if available
       canonical_url: wordpressData.meta?._yoast_wpseo_canonical || wordpressData.link || '',
-      robots: this.buildRobotsDirective(wordpressData.meta),
+      robots: this.buildRobotsDirective(wordpressData.meta, wordpressData.yoast_head_json),
       
       // Social media metadata from Yoast
-      og_title: wordpressData.meta?._yoast_wpseo_opengraph_title || '',
-      og_description: wordpressData.meta?._yoast_wpseo_opengraph_description || '',
-      og_image: wordpressData.meta?._yoast_wpseo_opengraph_image || '',
-      twitter_title: wordpressData.meta?._yoast_wpseo_twitter_title || '',
-      twitter_description: wordpressData.meta?._yoast_wpseo_twitter_description || '',
-      twitter_image: wordpressData.meta?._yoast_wpseo_twitter_image || ''
+      og_title: wordpressData.yoast_head_json?.og_title || wordpressData.meta?._yoast_wpseo_opengraph_title || '',
+      og_description: wordpressData.yoast_head_json?.og_description || wordpressData.meta?._yoast_wpseo_opengraph_description || '',
+      og_image: wordpressData.yoast_head_json?.og_image?.[0]?.url || wordpressData.meta?._yoast_wpseo_opengraph_image || '',
+      twitter_title: wordpressData.yoast_head_json?.twitter_title || wordpressData.meta?._yoast_wpseo_twitter_title || '',
+      twitter_description: wordpressData.yoast_head_json?.twitter_description || wordpressData.meta?._yoast_wpseo_twitter_description || '',
+      twitter_image: wordpressData.yoast_head_json?.twitter_image || wordpressData.meta?._yoast_wpseo_twitter_image || ''
     };
 
     return this.applyConfigFilter(extractedContent);
@@ -262,29 +262,53 @@ class ContentExtractor {
    * @param {Object} meta - WordPress meta object
    * @returns {string} Robots directive
    */
-  buildRobotsDirective(meta) {
-    if (!meta) return '';
+  buildRobotsDirective(meta, yoastHeadJson) {
+    if (!meta && !yoastHeadJson) return '';
     
     const directives = [];
     
-    if (meta._yoast_wpseo_meta_robots_noindex === '1') {
+    // Check Yoast Head JSON first, then fall back to meta
+    const robots = yoastHeadJson?.robots || {};
+    
+    // Index/Noindex
+    if (robots.index === 'noindex' || meta?._yoast_wpseo_meta_robots_noindex === '1') {
       directives.push('noindex');
     } else {
       directives.push('index');
     }
     
-    if (meta._yoast_wpseo_meta_robots_nofollow === '1') {
+    // Follow/Nofollow
+    if (robots.follow === 'nofollow' || meta?._yoast_wpseo_meta_robots_nofollow === '1') {
       directives.push('nofollow');
     } else {
       directives.push('follow');
     }
     
-    if (meta._yoast_wpseo_meta_robots_noarchive === '1') {
+    // Archive
+    if (robots.archive === 'noarchive' || meta?._yoast_wpseo_meta_robots_noarchive === '1') {
       directives.push('noarchive');
     }
     
-    if (meta._yoast_wpseo_meta_robots_nosnippet === '1') {
+    // Snippet
+    if (robots.snippet === 'nosnippet' || meta?._yoast_wpseo_meta_robots_nosnippet === '1') {
       directives.push('nosnippet');
+    }
+    
+    // Additional directives from Yoast Head JSON
+    if (robots.imageindex === 'noimageindex') {
+      directives.push('noimageindex');
+    }
+    
+    if (robots.max_snippet) {
+      directives.push(`max-snippet:${robots.max_snippet}`);
+    }
+    
+    if (robots.max_image_preview) {
+      directives.push(`max-image-preview:${robots.max_image_preview}`);
+    }
+    
+    if (robots.max_video_preview) {
+      directives.push(`max-video-preview:${robots.max_video_preview}`);
     }
     
     return directives.join(', ');

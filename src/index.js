@@ -18,6 +18,7 @@ import ReportGenerator from './report-generator.js';
 import ConfigLoader from './config-loader.js';
 import UniversalScraper from './universal-scraper.js';
 import CSVWriter from './utils/csv-writer.js';
+import ErrorLogger from './utils/error-logger.js';
 
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -59,9 +60,13 @@ program
       const contentExtractor = new ContentExtractor(extractionConfig);
       const reportGenerator = new ReportGenerator(evaluationConfig);
       
-      // Initialize CSV writer
+      // Initialize CSV writer and error logger
       const csvWriter = new CSVWriter(path.join('reports', 'seo_analysis_summary.csv'));
-      await csvWriter.initialize();
+      const errorLogger = new ErrorLogger();
+      await Promise.all([
+        csvWriter.initialize(),
+        errorLogger.initialize()
+      ]);
       
       spinner.text = 'Processing blog posts...';
       
@@ -105,7 +110,8 @@ program
             batch.map(identifier => processSinglePost(identifier, wordpressClient, geminiClient, contentExtractor, reportGenerator, csvWriter))
           );
           
-          batchResults.forEach((result, index) => {
+          for (let index = 0; index < batchResults.length; index++) {
+            const result = batchResults[index];
             if (result.status === 'fulfilled') {
               results.push(result.value);
             } else {
@@ -114,9 +120,17 @@ program
                 error: result.reason.message
               };
               errors.push(error);
+              
+              // Log error with additional context
+              const errorWithContext = {
+                ...result.reason,
+                slug: batch[index].value
+              };
+              await errorLogger.logError(errorWithContext);
+              
               console.error(chalk.red(`❌ Failed to process ${batch[index].value}: ${result.reason.message}`));
             }
-          });
+          }
           
           batchSpinner.succeed(`Batch ${Math.floor(i / batchSize) + 1} completed`);
         } catch (error) {
@@ -172,6 +186,15 @@ program
         errors.forEach(error => {
           console.log(`   - ${error.identifier.value}: ${error.error}`);
         });
+
+        // Generate and display error summary
+        const errorSummary = await errorLogger.getErrorSummary();
+        console.log('\nError Summary:');
+        errorSummary.forEach(summary => {
+          console.log(`${summary.error_type}: ${summary.count} occurrences`);
+          console.log('Affected posts:', summary.affected_slugs.join(', '));
+        });
+        console.log(`\nDetailed error logs available in: ${errorLogger.logDir}/`);
       }
       
     } catch (error) {

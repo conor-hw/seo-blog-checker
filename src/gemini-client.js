@@ -60,7 +60,28 @@ class GeminiClient {
   }
 
   buildEvaluationPrompt(extractedContent) {
-    return `You are an SEO expert evaluating Hostelworld blog content. Analyze this post and provide specific, actionable feedback.
+    return `You are an SEO expert evaluating Hostelworld blog content to identify high-impact optimization opportunities. Your goal is to help improve existing content performance, increase organic visibility, and ensure AI-friendliness for modern search features.
+
+EVALUATION OBJECTIVE:
+- Identify specific improvements for both high and low-performing content
+- Focus on updating existing content rather than suggesting new content creation
+- Ensure content is optimized for AI features (snippets, chatbots, voice)
+- Improve conversion potential through better user experience
+- Maintain high standards even for well-performing articles
+
+CRITICAL RULES:
+1. NEVER assume or invent metadata - if a field is missing, explicitly state "Not found"
+2. NEVER give vague recommendations like "improve SEO" or "make more engaging"
+3. NEVER skip analysis for high-performing articles - they still need optimization
+4. NEVER deviate from the scoring formula and weightings
+5. NEVER group feedback - provide specific analysis per category
+
+REQUIRED APPROACH:
+1. Point to exact content issues using quotes and examples
+2. Provide specific, measurable improvements (e.g., "Reduce meta description from 180 to 155 characters")
+3. Link every weakness to a concrete fix with expected impact
+4. Flag any missing metadata or structural elements
+5. Include improvement opportunities even for top-performing content
 
 CONTENT TO ANALYZE:
 Title: ${extractedContent.title || 'Not found'}
@@ -71,12 +92,49 @@ URL: ${extractedContent.url || 'Not found'}
 Last Modified: ${extractedContent.last_modified || 'Not found'}
 
 EVALUATION CRITERIA:
-- EEAT (20%): Expert authority, user experiences, Hostelworld brand integration
-- Technical SEO (10%): Metadata, structure, internal linking
-- Relevance (20%): Search intent match, comprehensive coverage
-- Text Quality (10%): Writing style, readability, formatting
-- AI Optimization (25%): Featured snippets, voice search, structured data
-- Freshness (15%): Current information, seasonal relevance
+
+1. EEAT Score (20%):
+   - Author expertise and credentials (must be explicitly stated)
+   - User testimonials with specific hostel experiences
+   - Expert quotes from local guides or Hostelworld staff
+   - Hostelworld brand integration (proprietary data, unique insights)
+   - Source attribution with current, authoritative links
+
+2. Technical SEO (10%):
+   - Meta description with clear CTA (150-160 chars)
+   - Proper heading hierarchy (single H1, logical H2s/H3s)
+   - Internal linking to booking pages and related content
+   - Schema markup (Article, FAQ, HowTo as appropriate)
+   - Image optimization (descriptive alt text, size, captions)
+
+3. Relevance Score (20%):
+   - Direct answers to top search queries
+   - Comprehensive coverage with pricing and practical details
+   - Gen Z tone (authentic, informal, experience-focused)
+   - Local insights from hostel staff or travelers
+   - Clear next steps (booking CTAs, related content)
+
+4. Text Quality Score (10%):
+   - Short paragraphs (3-4 sentences max)
+   - Active voice with Gen Z-friendly language
+   - Consistent regional spelling and terminology
+   - Scannable formatting (bullets, tables, highlights)
+   - Clear subheadings every 200-300 words
+
+5. AI Optimization Score (25%):
+   - Featured snippet format for key information
+   - FAQ section addressing PAA questions
+   - Voice-optimized answers (conversational, direct)
+   - Structured data for rich results
+   - Clear definitions and step-by-step instructions
+   - Tables for price comparisons and features
+
+6. Freshness Score (15%):
+   - Content updated within last 6 months
+   - Current prices and availability info
+   - Recent user reviews or testimonials
+   - Seasonal information for next 3-6 months
+   - All links checked and working
 
 IMPORTANT GUIDELINES:
 1. Flag any missing metadata - don't assume it exists
@@ -85,21 +143,55 @@ IMPORTANT GUIDELINES:
 4. Analyze high-scoring sections too
 5. Keep feedback clear and actionable
 
-Return a SINGLE JSON object in this EXACT format (no other text):
+Provide your analysis in this format (ensure proper JSON formatting):
 
 {
-  "scores": {
-    "eeat": 75,
-    "technical": 80,
-    "relevance": 85,
-    "quality": 90,
-    "ai_ready": 70,
-    "freshness": 65
+  "eeat_score": {
+    "score": null, // calculate score here based on the criteria and justify score with examples referencing the content
+    "analysis": "", // Provide analysis here based on understanding of the content
+    "strengths": [], // Provide strengths here based on understanding of the content
+    "weaknesses": [], // Provide weaknesses here based on understanding of the content
+    "recommendations": [] // Provide recommendations here based on understanding of the content
   },
-  "overall_score": 77.5,
-  "strengths": ["Clear heading structure", "Good keyword coverage"],
-  "improvements": ["Add author bio (+10)", "Update prices (+5)"],
-  "priority": "medium"
+  "technical_score": {
+    "score": null, / calculate score here based on the criteria and justify score with examples referencing the content
+    "analysis": "", // Provide analysis here based on understanding of the content
+    "strengths": [], // Provide strengths here based on understanding of the content
+    "weaknesses": [], // Provide weaknesses here based on understanding of the content
+    "recommendations": [] // Provide recommendations here based on understanding of the content
+  },
+  "relevance_score": {
+    "score": null, / calculate score here based on the criteria and justify score with examples referencing the content
+    "analysis": "", // Provide analysis here based on understanding of the content
+    "strengths": [], // Provide strengths here based on understanding of the content
+    "weaknesses": [], // Provide weaknesses here based on understanding of the content
+    "recommendations": [] // Provide recommendations here based on understanding of the content
+  },
+  "text_quality_score": {
+    "score": null, / calculate score here based on the criteria and justify score with examples referencing the content
+    "analysis": "", // Provide analysis here based on understanding of the content
+    "strengths": [], // Provide strengths here based on understanding of the content
+    "weaknesses": [], // Provide weaknesses here based on understanding of the content
+    "recommendations": [] // Provide recommendations here based on understanding of the content
+  },
+  "ai_optimization_score": {
+    "score": null, / calculate score here based on the criteria and justify score with examples referencing the content
+    "analysis": "", // Provide analysis here based on understanding of the content
+    "strengths": [], // Provide strengths here based on understanding of the content
+    "weaknesses": [], // Provide weaknesses here based on understanding of the content
+    "recommendations": [] // Provide recommendations here based on understanding of the content
+    ]
+  },
+  "freshness_score": {
+    "score": null, // calculate score here based on the criteria
+    "analysis": "", // Provide analysis here based on understanding of the content
+    "strengths": [], // Provide strengths here based on understanding of the content
+    "weaknesses": [], // Provide weaknesses here based on understanding of the content
+    "recommendations": [] // Provide recommendations here based on understanding of the content
+  },
+  "overall_score": null, // calculate score here based on the criteria
+  "optimization_recommendation": "", // Optimization recommendation
+  "priority_recommendations": [] // Priority recommendations
 }`;
   }
 
