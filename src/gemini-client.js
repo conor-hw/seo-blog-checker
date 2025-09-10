@@ -63,7 +63,8 @@ class GeminiClient {
     return `You are an SEO expert evaluating Hostelworld blog content to identify high-impact optimization opportunities. Your goal is to help improve existing content performance, increase organic visibility, and ensure AI-friendliness for modern search features.
 
 EVALUATION OBJECTIVE:
-- Identify specific improvements for both high and low-performing content
+- Identify strengths of the content and call them out for learning purposes
+- Identify specific improvements for blog content content
 - Focus on updating existing content rather than suggesting new content creation
 - Ensure content is optimized for AI features (snippets, chatbots, voice)
 - Improve conversion potential through better user experience
@@ -90,6 +91,7 @@ Meta Description: ${extractedContent.meta_description || 'Not found'}
 Keywords: ${extractedContent.keywords ? extractedContent.keywords.join(', ') : 'Not found'}
 URL: ${extractedContent.url || 'Not found'}
 Last Modified: ${extractedContent.last_modified || 'Not found'}
+Yoast Head Json: ${extractedContent.yoast_head_json || 'Not found'}
 
 EVALUATION CRITERIA:
 
@@ -147,51 +149,50 @@ Provide your analysis in this format (ensure proper JSON formatting):
 
 {
   "eeat_score": {
-    "score": null, // calculate score here based on the criteria and justify score with examples referencing the content
-    "analysis": "", // Provide analysis here based on understanding of the content
-    "strengths": [], // Provide strengths here based on understanding of the content
-    "weaknesses": [], // Provide weaknesses here based on understanding of the content
-    "recommendations": [] // Provide recommendations here based on understanding of the content
+    "score": null, // calculate score here based on the criteria and justify score with EXPLICIT examples referencing the content shared for analysis
+    "analysis": "", // Detailed analysis justifying the score with EXPLICIT references to the content
+    "strengths": [], // Detailed overview of the strengths of the content
+    "weaknesses": [], // Detailed overview of the weaknesses of the content
+    "recommendations": [] // Actionable recommendations for improvement
   },
   "technical_score": {
-    "score": null, / calculate score here based on the criteria and justify score with examples referencing the content
-    "analysis": "", // Provide analysis here based on understanding of the content
-    "strengths": [], // Provide strengths here based on understanding of the content
-    "weaknesses": [], // Provide weaknesses here based on understanding of the content
-    "recommendations": [] // Provide recommendations here based on understanding of the content
+    "score": null, // calculate score here based on the criteria and justify score with EXPLICIT examples referencing the content shared for analysis
+    "analysis": "", // Detailed analysis justifying the score with EXPLICIT references to the content
+    "strengths": [], // Detailed overview of the strengths of the content
+    "weaknesses": [], // Detailed overview of the weaknesses of the content
+    "recommendations": [] // Actionable recommendations for improvement
   },
   "relevance_score": {
-    "score": null, / calculate score here based on the criteria and justify score with examples referencing the content
-    "analysis": "", // Provide analysis here based on understanding of the content
-    "strengths": [], // Provide strengths here based on understanding of the content
-    "weaknesses": [], // Provide weaknesses here based on understanding of the content
-    "recommendations": [] // Provide recommendations here based on understanding of the content
+    "score": null, // calculate score here based on the criteria and justify score with EXPLICIT examples referencing the content shared for analysis
+    "analysis": "", // Detailed analysis justifying the score with EXPLICIT references to the content
+    "strengths": [], // Detailed overview of the strengths of the content
+    "weaknesses": [], // Detailed overview of the weaknesses of the content
+    "recommendations": [] // Actionable recommendations for improvement
   },
   "text_quality_score": {
-    "score": null, / calculate score here based on the criteria and justify score with examples referencing the content
-    "analysis": "", // Provide analysis here based on understanding of the content
-    "strengths": [], // Provide strengths here based on understanding of the content
-    "weaknesses": [], // Provide weaknesses here based on understanding of the content
-    "recommendations": [] // Provide recommendations here based on understanding of the content
+    "score": null, // calculate score here based on the criteria and justify score with EXPLICIT examples referencing the content shared for analysis
+    "analysis": "", // Detailed analysis justifying the score with EXPLICIT references to the content
+    "strengths": [], // Detailed overview of the strengths of the content
+    "weaknesses": [], // Detailed overview of the weaknesses of the content
+    "recommendations": [] // Actionable recommendations for improvement
   },
   "ai_optimization_score": {
-    "score": null, / calculate score here based on the criteria and justify score with examples referencing the content
-    "analysis": "", // Provide analysis here based on understanding of the content
-    "strengths": [], // Provide strengths here based on understanding of the content
-    "weaknesses": [], // Provide weaknesses here based on understanding of the content
-    "recommendations": [] // Provide recommendations here based on understanding of the content
-    ]
+    "score": null, // calculate score here based on the criteria and justify score with EXPLICIT examples referencing the content shared for analysis
+    "analysis": "", // Detailed analysis justifying the score with EXPLICIT references to the content
+    "strengths": [], // Detailed overview of the strengths of the content
+    "weaknesses": [], // Detailed overview of the weaknesses of the content
+    "recommendations": [] // Actionable recommendations for improvement
   },
   "freshness_score": {
-    "score": null, // calculate score here based on the criteria
-    "analysis": "", // Provide analysis here based on understanding of the content
-    "strengths": [], // Provide strengths here based on understanding of the content
-    "weaknesses": [], // Provide weaknesses here based on understanding of the content
-    "recommendations": [] // Provide recommendations here based on understanding of the content
+    "score": null, // calculate score here based on the criteria and justify score with EXPLICIT examples referencing the content shared for analysis
+    "analysis": "", // Detailed analysis justifying the score with EXPLICIT references to the content
+    "strengths": [], // Detailed overview of the strengths of the content
+    "weaknesses": [], // Detailed overview of the weaknesses of the content
+    "recommendations": [] // Actionable recommendations for improvement
   },
   "overall_score": null, // calculate score here based on the criteria
-  "optimization_recommendation": "", // Optimization recommendation
-  "priority_recommendations": [] // Priority recommendations
+  "optimization_recommendation": "", // Detailed optimization recommendation
+  "priority_recommendations": [] // Priority recommendations including actionable recommendations for improvement
 }`;
   }
 
@@ -329,16 +330,17 @@ Provide your analysis in this format (ensure proper JSON formatting):
       // Calculate overall score if not provided
       if (!evaluation.overall_score) {
         const weights = {
-          eeat: 0.20,
-          technical: 0.10,
-          relevance: 0.20,
-          quality: 0.10,
-          ai_ready: 0.25,
-          freshness: 0.15
+          eeat_score: 0.20,
+          technical_score: 0.10,
+          relevance_score: 0.20,
+          text_quality_score: 0.10,
+          ai_optimization_score: 0.25,
+          freshness_score: 0.15
         };
 
         evaluation.overall_score = Object.entries(weights).reduce((sum, [key, weight]) => {
-          return sum + (evaluation.scores[key] * weight);
+          const score = evaluation[key]?.score || 0;
+          return sum + (score * weight);
         }, 0);
       }
 
