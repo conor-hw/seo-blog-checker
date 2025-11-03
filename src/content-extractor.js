@@ -13,7 +13,8 @@ class ContentExtractor {
    */
   extract(data) {
     // Detect data format
-    const isWordPressData = data.content && data.content.rendered;
+    // WordPress data has normalized structure with yoast_head_json, meta, and string content
+    const isWordPressData = data.yoast_head_json !== undefined || data.meta !== undefined || (data.id && data.slug && data.link);
     const isUniversalData = data.content && data.content.text;
     
     if (isWordPressData) {
@@ -30,6 +31,10 @@ class ContentExtractor {
    * Extract content from WordPress API format
    */
   extractWordPressContent(wordpressData) {
+    
+    const yoast = wordpressData.yoast_head_json || {};
+    const meta = wordpressData.meta || {};
+    
     const extractedContent = {
       post_id: wordpressData.id,
       slug: wordpressData.slug,
@@ -38,20 +43,25 @@ class ContentExtractor {
       content: this.stripHtml(wordpressData.content?.rendered || wordpressData.content || ''),
       content_html: wordpressData.content?.rendered || wordpressData.content || '',
       excerpt: this.stripHtml(wordpressData.excerpt?.rendered || wordpressData.excerpt || ''),
-      meta_description: wordpressData.meta?._yoast_wpseo_metadesc || '',
-      keywords: wordpressData.meta?._yoast_wpseo_focuskw ? [wordpressData.meta._yoast_wpseo_focuskw] : [],
+      
+      // Simple fallback: yoast_head_json first, then meta
+      meta_description: yoast.description || meta._yoast_wpseo_metadesc || '',
+      keywords: yoast.keywords || (meta._yoast_wpseo_focuskw ? [meta._yoast_wpseo_focuskw] : []),
+      
       headers: this.extractHeadings(wordpressData.content?.rendered || ''),
       word_count: this.getWordCount(wordpressData.content?.rendered || ''),
+      last_modified: wordpressData.modified || '',
+      yoast_head_json: wordpressData.yoast_head_json || null,
       
-      // Enhanced WordPress/Yoast SEO data
+      // Enhanced WordPress/Yoast SEO data with simple fallback
       yoast_seo_score: wordpressData.meta?._yoast_wpseo_linkdex || '',
       yoast_readability_score: wordpressData.meta?._yoast_wpseo_content_score || '',
-      yoast_focus_keyword: wordpressData.meta?._yoast_wpseo_focuskw || '',
-      yoast_seo_title: wordpressData.meta?._yoast_wpseo_title || '',
-      yoast_canonical: wordpressData.meta?._yoast_wpseo_canonical || '',
-      yoast_noindex: wordpressData.meta?._yoast_wpseo_meta_robots_noindex || '',
-      yoast_nofollow: wordpressData.meta?._yoast_wpseo_meta_robots_nofollow || '',
-      primary_category: wordpressData.meta?._yoast_wpseo_primary_category || '',
+      yoast_focus_keyword: yoast.focus_keywords || meta._yoast_wpseo_focuskw || '',
+      yoast_seo_title: yoast.title || meta._yoast_wpseo_title || '',
+      yoast_canonical: yoast.canonical || meta._yoast_wpseo_canonical || '',
+      yoast_noindex: yoast.robots?.index === 'noindex' || meta._yoast_wpseo_meta_robots_noindex === '1' || false,
+      yoast_nofollow: yoast.robots?.follow === 'nofollow' || meta._yoast_wpseo_meta_robots_nofollow === '1' || false,
+      primary_category: yoast.primary_category || meta._yoast_wpseo_primary_category || '',
       
       // WordPress post metadata
       post_status: wordpressData.status || '',
@@ -68,15 +78,15 @@ class ContentExtractor {
       
       // Extract additional meta if available
       canonical_url: wordpressData.meta?._yoast_wpseo_canonical || wordpressData.link || '',
-      robots: this.buildRobotsDirective(wordpressData.meta),
+      robots: this.buildRobotsDirective(wordpressData.meta, wordpressData.yoast_head_json),
       
-      // Social media metadata from Yoast
-      og_title: wordpressData.meta?._yoast_wpseo_opengraph_title || '',
-      og_description: wordpressData.meta?._yoast_wpseo_opengraph_description || '',
-      og_image: wordpressData.meta?._yoast_wpseo_opengraph_image || '',
-      twitter_title: wordpressData.meta?._yoast_wpseo_twitter_title || '',
-      twitter_description: wordpressData.meta?._yoast_wpseo_twitter_description || '',
-      twitter_image: wordpressData.meta?._yoast_wpseo_twitter_image || ''
+      // Social media metadata with simple fallback
+      og_title: yoast.og_title || meta._yoast_wpseo_opengraph_title || '',
+      og_description: yoast.og_description || meta._yoast_wpseo_opengraph_description || '',
+      og_image: yoast.og_image?.[0]?.url || meta._yoast_wpseo_opengraph_image || '',
+      twitter_title: yoast.twitter_title || meta._yoast_wpseo_twitter_title || '',
+      twitter_description: yoast.twitter_description || meta._yoast_wpseo_twitter_description || '',
+      twitter_image: yoast.twitter_image || meta._yoast_wpseo_twitter_image || ''
     };
 
     return this.applyConfigFilter(extractedContent);
@@ -191,6 +201,17 @@ class ContentExtractor {
         filteredContent[field] = extractedContent[field];
       }
     }
+    
+    // Handle nested configurations (e.g., yoast_seo.yoast_seo_title -> yoast_seo_title)
+    for (const [section, sectionConfig] of Object.entries(this.config)) {
+      if (typeof sectionConfig === 'object' && sectionConfig !== null && !Array.isArray(sectionConfig)) {
+        for (const [field, enabled] of Object.entries(sectionConfig)) {
+          if (enabled && extractedContent[field] !== undefined) {
+            filteredContent[field] = extractedContent[field];
+          }
+        }
+      }
+    }
 
     // Always include essential fields
     const essentialFields = ['post_id', 'slug', 'url', 'title', 'content'];
@@ -262,29 +283,53 @@ class ContentExtractor {
    * @param {Object} meta - WordPress meta object
    * @returns {string} Robots directive
    */
-  buildRobotsDirective(meta) {
-    if (!meta) return '';
+  buildRobotsDirective(meta, yoastHeadJson) {
+    if (!meta && !yoastHeadJson) return '';
     
     const directives = [];
     
-    if (meta._yoast_wpseo_meta_robots_noindex === '1') {
+    // Check Yoast Head JSON first, then fall back to meta
+    const robots = yoastHeadJson?.robots || {};
+    
+    // Index/Noindex
+    if (robots.index === 'noindex' || meta?._yoast_wpseo_meta_robots_noindex === '1') {
       directives.push('noindex');
     } else {
       directives.push('index');
     }
     
-    if (meta._yoast_wpseo_meta_robots_nofollow === '1') {
+    // Follow/Nofollow
+    if (robots.follow === 'nofollow' || meta?._yoast_wpseo_meta_robots_nofollow === '1') {
       directives.push('nofollow');
     } else {
       directives.push('follow');
     }
     
-    if (meta._yoast_wpseo_meta_robots_noarchive === '1') {
+    // Archive
+    if (robots.archive === 'noarchive' || meta?._yoast_wpseo_meta_robots_noarchive === '1') {
       directives.push('noarchive');
     }
     
-    if (meta._yoast_wpseo_meta_robots_nosnippet === '1') {
+    // Snippet
+    if (robots.snippet === 'nosnippet' || meta?._yoast_wpseo_meta_robots_nosnippet === '1') {
       directives.push('nosnippet');
+    }
+    
+    // Additional directives from Yoast Head JSON
+    if (robots.imageindex === 'noimageindex') {
+      directives.push('noimageindex');
+    }
+    
+    if (robots.max_snippet) {
+      directives.push(`max-snippet:${robots.max_snippet}`);
+    }
+    
+    if (robots.max_image_preview) {
+      directives.push(`max-image-preview:${robots.max_image_preview}`);
+    }
+    
+    if (robots.max_video_preview) {
+      directives.push(`max-video-preview:${robots.max_video_preview}`);
     }
     
     return directives.join(', ');

@@ -103,7 +103,7 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
     } else if (score >= 70) {
       insights += `The article shows good EEAT signals but requires immediate improvement. `;
     } else {
-      insights += `EEAT signals are critically weak and must be enhanced immediately. `;
+      insights += `EEAT signals could be strengthened for better authority and trust. `;
     }
 
     insights += analysis;
@@ -117,9 +117,21 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
       insights += ` Schema markup is present (${content.schema.length} types found), which helps search engines understand the content structure.`;
     }
 
-    // Add recommendations with assertive language
-    if (eeatData.recommendations && eeatData.recommendations.length > 0) {
-      insights += '\n\n**EEAT Actions Required:**\n';
+    // Add recommendations or enhancements based on score
+    if (score >= 70) {
+      insights += '\n\n**What\'s Working Well:**\n';
+      eeatData.strengths.forEach((strength, index) => {
+        insights += `${index + 1}. ${strength}\n`;
+      });
+      
+      if (eeatData.enhancement_opportunities && eeatData.enhancement_opportunities.length > 0) {
+        insights += '\n**Improvement Opportunities:**\n';
+        eeatData.enhancement_opportunities.forEach((opp, index) => {
+          insights += `${index + 1}. ${opp}\n`;
+        });
+      }
+    } else if (eeatData.recommendations && eeatData.recommendations.length > 0) {
+      insights += '\n\n**EEAT Enhancement Opportunities:**\n';
       eeatData.recommendations.forEach((rec, index) => {
         insights += `${index + 1}. ${this.makeAssertive(rec)}\n`;
       });
@@ -142,7 +154,7 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
     } else if (score >= 75) {
       insights += `The technical foundation is solid but requires immediate fixes in key areas. `;
     } else {
-      insights += `Technical SEO is failing and needs comprehensive overhaul immediately. `;
+      insights += `Technical SEO has optimization opportunities that could improve search performance. `;
     }
 
     insights += analysis;
@@ -155,9 +167,9 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
       if (titleLength >= 50 && titleLength <= 60) {
         insights += `• **Title**: Perfect length (${titleLength} characters) - "${content.title}"\n`;
       } else if (titleLength < 50) {
-        insights += `• **Title**: TOO SHORT (${titleLength} characters) - Expand immediately to 50-60 characters for better SEO impact\n`;
+        insights += `• **Title**: COULD BE LONGER (${titleLength} characters) - Consider expanding to 50-60 characters for better SEO impact\n`;
       } else {
-        insights += `• **Title**: TOO LONG (${titleLength} characters) - Shorten immediately to prevent truncation in search results\n`;
+        insights += `• **Title**: COULD BE SHORTER (${titleLength} characters) - Consider shortening to prevent truncation in search results\n`;
       }
     }
 
@@ -168,7 +180,7 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
       } else if (metaLength < 150) {
         insights += `• **Meta Description**: WASTED OPPORTUNITY (${metaLength} characters) - Expand to 150-160 characters to maximize SERP real estate\n`;
       } else {
-        insights += `• **Meta Description**: WILL BE TRUNCATED (${metaLength} characters) - Shorten immediately\n`;
+        insights += `• **Meta Description**: MAY BE TRUNCATED (${metaLength} characters) - Consider shortening to 150-160 characters\n`;
       }
     }
 
@@ -178,9 +190,9 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
       insights += `• **Headings**: ${content.headers.length} total headings (${h1Count} H1, ${h2Count} H2)\n`;
       
       if (h1Count === 0) {
-        insights += `  🚨 CRITICAL: Missing H1 tag - Add immediately for proper SEO structure\n`;
+        insights += `  ⚠️ OPPORTUNITY: Missing H1 tag - Consider adding for better SEO structure\n`;
       } else if (h1Count > 1) {
-        insights += `  🚨 CRITICAL: Multiple H1 tags detected - Fix immediately, use only one H1\n`;
+        insights += `  ⚠️ OPPORTUNITY: Multiple H1 tags detected - Consider using only one H1 for better structure\n`;
       } else {
         insights += `  ✅ H1 structure is correct\n`;
       }
@@ -192,13 +204,25 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
       } else if (content.word_count >= 800) {
         insights += `• **Content Length**: Adequate (${content.word_count} words) - Expand to 1500+ words for better rankings\n`;
       } else {
-        insights += `• **Content Length**: INSUFFICIENT (${content.word_count} words) - Expand immediately to minimum 800 words\n`;
+        insights += `• **Content Length**: COULD BE EXPANDED (${content.word_count} words) - Consider expanding to 800+ words for better depth\n`;
       }
     }
 
-    // Add recommendations with assertive language
-    if (techData.recommendations && techData.recommendations.length > 0) {
-      insights += '\n**Technical Fixes Required:**\n';
+    // Add recommendations or enhancements based on score
+    if (score >= 70) {
+      insights += '\n\n**What\'s Working Well:**\n';
+      techData.strengths.forEach((strength, index) => {
+        insights += `${index + 1}. ${strength}\n`;
+      });
+      
+      if (techData.enhancement_opportunities && techData.enhancement_opportunities.length > 0) {
+        insights += '\n**Improvement Opportunities:**\n';
+        techData.enhancement_opportunities.forEach((opp, index) => {
+          insights += `${index + 1}. ${opp}\n`;
+        });
+      }
+    } else if (techData.recommendations && techData.recommendations.length > 0) {
+      insights += '\n**Technical Optimization Opportunities:**\n';
       techData.recommendations.forEach((rec, index) => {
         insights += `${index + 1}. ${this.makeAssertive(rec)}\n`;
       });
@@ -219,9 +243,9 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
     if (score >= 85) {
       insights += `The content delivers exceptional value to users. Maintain this standard. `;
     } else if (score >= 70) {
-      insights += `Good relevance but must be improved to capture more user intent. `;
+      insights += `Good relevance but could be enhanced to better capture user intent. `;
     } else {
-      insights += `Relevance is failing users - immediate content overhaul required. `;
+      insights += `Relevance could be improved to better serve user intent. `;
     }
 
     insights += analysis;
@@ -234,12 +258,25 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
       if (avgWordsPerSentence <= 20) {
         insights += ` The content uses optimal sentence length (avg ${avgWordsPerSentence} words/sentence) for readability.`;
       } else {
-        insights += ` Sentences are too long (avg ${avgWordsPerSentence} words/sentence) - Break them down immediately for better readability.`;
+        insights += ` Sentences could be shorter (avg ${avgWordsPerSentence} words/sentence) - Consider breaking them down for better readability.`;
       }
     }
 
-    if (relevanceData.recommendations && relevanceData.recommendations.length > 0) {
-      insights += '\n\n**Relevance Actions Required:**\n';
+    // Add recommendations or enhancements based on score
+    if (score >= 70) {
+      insights += '\n\n**What\'s Working Well:**\n';
+      relevanceData.strengths.forEach((strength, index) => {
+        insights += `${index + 1}. ${strength}\n`;
+      });
+      
+      if (relevanceData.enhancement_opportunities && relevanceData.enhancement_opportunities.length > 0) {
+        insights += '\n**Improvement Opportunities:**\n';
+        relevanceData.enhancement_opportunities.forEach((opp, index) => {
+          insights += `${index + 1}. ${opp}\n`;
+        });
+      }
+    } else if (relevanceData.recommendations && relevanceData.recommendations.length > 0) {
+      insights += '\n\n**Relevance Enhancement Opportunities:**\n';
       relevanceData.recommendations.forEach((rec, index) => {
         insights += `${index + 1}. ${this.makeAssertive(rec)}\n`;
       });
@@ -260,7 +297,7 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
     if (score >= 85) {
       insights += `Writing quality is excellent. Maintain these standards. `;
     } else if (score >= 70) {
-      insights += `Writing quality is acceptable but must be improved for competitive advantage. `;
+      insights += `Writing quality is acceptable but could be enhanced for better engagement. `;
     } else {
       insights += `Writing quality is substandard - immediate editorial review required. `;
     }
@@ -277,12 +314,25 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
       if (avgWordsPerParagraph <= 100) {
         insights += ` This creates excellent readability and scannable content.`;
       } else {
-        insights += ` Break down paragraphs immediately - they're too long for optimal readability.`;
+        insights += ` Consider breaking down paragraphs - shorter paragraphs improve readability.`;
       }
     }
 
-    if (textData.recommendations && textData.recommendations.length > 0) {
-      insights += '\n\n**Text Quality Fixes Required:**\n';
+    // Add recommendations or enhancements based on score
+    if (score >= 70) {
+      insights += '\n\n**What\'s Working Well:**\n';
+      textData.strengths.forEach((strength, index) => {
+        insights += `${index + 1}. ${strength}\n`;
+      });
+      
+      if (textData.enhancement_opportunities && textData.enhancement_opportunities.length > 0) {
+        insights += '\n**Improvement Opportunities:**\n';
+        textData.enhancement_opportunities.forEach((opp, index) => {
+          insights += `${index + 1}. ${opp}\n`;
+        });
+      }
+    } else if (textData.recommendations && textData.recommendations.length > 0) {
+      insights += '\n\n**Text Quality Enhancement Opportunities:**\n';
       textData.recommendations.forEach((rec, index) => {
         insights += `${index + 1}. ${this.makeAssertive(rec)}\n`;
       });
@@ -303,9 +353,9 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
     if (score >= 80) {
       insights += `Excellent AI and voice search optimization. You're ahead of the competition. `;
     } else if (score >= 60) {
-      insights += `AI optimization foundation exists but critical improvements needed immediately. `;
+      insights += `AI optimization foundation exists but could benefit from enhancements. `;
     } else {
-      insights += `AI optimization is failing - you're losing traffic to AI-optimized competitors. Fix immediately. `;
+      insights += `AI optimization has significant improvement opportunities for better search visibility. `;
     }
 
     insights += analysis;
@@ -323,16 +373,29 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
       insights += ` Only ${questionHeadings} out of ${content.headers.length} headings are question-based.`;
       
       if (questionHeadings === 0) {
-        insights += ` This is a critical failure - Add question-based headings immediately for voice search optimization.`;
+        insights += ` Consider adding question-based headings for better voice search optimization.`;
       } else if (questionHeadings < content.headers.length * 0.3) {
-        insights += ` Insufficient question-based headings - Convert more headings to questions immediately.`;
+        insights += ` Consider converting more headings to questions for better optimization.`;
       } else {
         insights += ` Good question-based heading ratio - maintain this approach.`;
       }
     }
 
-    if (aiData.recommendations && aiData.recommendations.length > 0) {
-      insights += '\n\n**AI Optimization Actions Required:**\n';
+    // Add recommendations or enhancements based on score
+    if (score >= 70) {
+      insights += '\n\n**What\'s Working Well:**\n';
+      aiData.strengths.forEach((strength, index) => {
+        insights += `${index + 1}. ${strength}\n`;
+      });
+      
+      if (aiData.enhancement_opportunities && aiData.enhancement_opportunities.length > 0) {
+        insights += '\n**Improvement Opportunities:**\n';
+        aiData.enhancement_opportunities.forEach((opp, index) => {
+          insights += `${index + 1}. ${opp}\n`;
+        });
+      }
+    } else if (aiData.recommendations && aiData.recommendations.length > 0) {
+      insights += '\n\n**AI Optimization Opportunities:**\n';
       aiData.recommendations.forEach((rec, index) => {
         insights += `${index + 1}. ${this.makeAssertive(rec)}\n`;
       });
@@ -353,9 +416,9 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
     if (score >= 80) {
       insights += `Content is current and competitive. Maintain regular updates. `;
     } else if (score >= 60) {
-      insights += `Content is aging and losing relevance - update immediately. `;
+      insights += `Content could benefit from updates to maintain relevance. `;
     } else {
-      insights += `Content is outdated and harming your rankings - complete refresh required immediately. `;
+      insights += `Content would benefit from a refresh to improve current relevance. `;
     }
 
     insights += analysis;
@@ -369,14 +432,27 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
       if (hasCurrentYear) {
         insights += ` Content references current year (${currentYear}) - good freshness signal.`;
       } else if (hasPreviousYear) {
-        insights += ` Content only references ${currentYear - 1} - Update with ${currentYear} information immediately.`;
+        insights += ` Content references ${currentYear - 1} - Consider adding ${currentYear} information for freshness.`;
       } else {
-        insights += ` No recent year references - Add current year (${currentYear}) content immediately.`;
+        insights += ` No recent year references - Consider adding current year (${currentYear}) content for better freshness.`;
       }
     }
 
-    if (freshnessData.recommendations && freshnessData.recommendations.length > 0) {
-      insights += '\n\n**Freshness Actions Required:**\n';
+    // Add recommendations or enhancements based on score
+    if (score >= 70) {
+      insights += '\n\n**What\'s Working Well:**\n';
+      freshnessData.strengths.forEach((strength, index) => {
+        insights += `${index + 1}. ${strength}\n`;
+      });
+      
+      if (freshnessData.enhancement_opportunities && freshnessData.enhancement_opportunities.length > 0) {
+        insights += '\n**Improvement Opportunities:**\n';
+        freshnessData.enhancement_opportunities.forEach((opp, index) => {
+          insights += `${index + 1}. ${opp}\n`;
+        });
+      }
+    } else if (freshnessData.recommendations && freshnessData.recommendations.length > 0) {
+      insights += '\n\n**Freshness Enhancement Opportunities:**\n';
       freshnessData.recommendations.forEach((rec, index) => {
         insights += `${index + 1}. ${this.makeAssertive(rec)}\n`;
       });
@@ -395,27 +471,27 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
     if (score >= 80) {
       recommendation = `This article performs well with a score above 80, but don't get complacent. Continue optimizing the lowest-scoring areas to maintain competitive advantage and prevent ranking decay.`;
     } else if (score >= 60) {
-      recommendation = `This article is underperforming with significant optimization opportunities. Execute the high-priority recommendations immediately to unlock better rankings and traffic.`;
+      recommendation = `This article has good potential with several optimization opportunities. Implementing the recommendations could improve rankings and traffic.`;
     } else {
-      recommendation = `This article is failing SEO standards and losing you traffic. Implement all critical fixes immediately before working on advanced optimizations. Your competitors are outranking you.`;
+      recommendation = `This article would benefit from optimization improvements. Implementing the recommended changes could help improve search performance and user experience.`;
     }
 
     // Add specific suggestions with assertive language
     const suggestions = this.generateSpecificSuggestions(evaluation, content);
     if (suggestions.length > 0) {
-      recommendation += '\n\n**Critical Fixes - Execute Immediately:**\n' + suggestions.join('\n');
+      recommendation += '\n\n**High-Priority Recommendations:**\n' + suggestions.join('\n');
     }
 
     // Add missing content sections with assertive language
     const missingSections = this.identifyMissingSections(evaluation, content);
     if (missingSections.length > 0) {
-      recommendation += '\n\n**Missing Content - Add Immediately:**\n' + missingSections.join('\n');
+      recommendation += '\n\n**Content Enhancement Opportunities:**\n' + missingSections.join('\n');
     }
 
     // Add title/meta/heading improvements with assertive language
     const titleMetaImprovements = this.generateTitleMetaImprovements(content);
     if (titleMetaImprovements) {
-      recommendation += '\n\n**Title/Meta/Heading Fixes - Execute Now:**\n' + titleMetaImprovements;
+      recommendation += '\n\n**Title/Meta/Heading Recommendations:**\n' + titleMetaImprovements;
     }
 
     return recommendation;
@@ -429,22 +505,22 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
 
     // Check freshness with assertive language
     if (evaluation.freshness_score && evaluation.freshness_score.score < 70) {
-      suggestions.push('• **Freshness**: Execute complete editorial review immediately. Update all statistics, verify every link, add current year references.');
+      suggestions.push('• **Freshness**: Consider an editorial review to update statistics, verify links, and add current year references.');
     }
 
     // Check AI optimization with assertive language
     if (evaluation.ai_optimization_score && evaluation.ai_optimization_score.score < 70) {
-      suggestions.push('• **AI Optimization**: Add structured FAQ section now. Convert headings to question format immediately for voice search capture.');
+      suggestions.push('• **AI Optimization**: Consider adding a structured FAQ section and converting headings to question format for better voice search optimization.');
     }
 
     // Check EEAT with assertive language
     if (evaluation.eeat_score && evaluation.eeat_score.score < 80) {
-      suggestions.push('• **EEAT**: Add user testimonials, expert quotes, and authoritative citations immediately. Your credibility is at stake.');
+      suggestions.push('• **EEAT**: Consider adding user testimonials, expert quotes, and authoritative citations to strengthen credibility.');
     }
 
     // Check technical with assertive language
     if (evaluation.technical_score && evaluation.technical_score.score < 85) {
-      suggestions.push('• **Technical**: Fix heading structure, implement internal linking strategy, and deploy proper schema markup immediately.');
+      suggestions.push('• **Technical**: Consider optimizing heading structure, internal linking strategy, and schema markup for better technical SEO.');
     }
 
     return suggestions;
@@ -458,7 +534,7 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
 
     // Check for FAQ section
     if (!content.content || !content.content.toLowerCase().includes('faq')) {
-      missing.push('• Add comprehensive FAQ section immediately - you\'re missing voice search opportunities');
+      missing.push('• Consider adding a comprehensive FAQ section to capture voice search opportunities');
     }
 
     // Check for conclusion
@@ -468,7 +544,7 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
 
     // Check for call-to-action
     if (!content.content || !content.content.toLowerCase().includes('comment')) {
-      missing.push('• Add clear call-to-action immediately - you\'re wasting engagement opportunities');
+      missing.push('• Consider adding a clear call-to-action to improve user engagement');
     }
 
     return missing;
@@ -483,9 +559,9 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
     if (content.title) {
       const titleLength = content.title.length;
       if (titleLength < 50) {
-        improvements += `• **Title**: EXPAND NOW - Current ${titleLength} characters wastes SEO potential. Target 50-60 characters immediately.\n`;
+        improvements += `• **Title**: COULD BE LONGER - Current ${titleLength} characters. Consider targeting 50-60 characters for better SEO.\n`;
       } else if (titleLength > 60) {
-        improvements += `• **Title**: SHORTEN NOW - Current ${titleLength} characters will be truncated. Cut to 50-60 characters immediately.\n`;
+        improvements += `• **Title**: COULD BE SHORTER - Current ${titleLength} characters may be truncated. Consider 50-60 characters.\n`;
       } else {
         improvements += `• **Title**: Optimal length (${titleLength} characters) - maintain this standard.\n`;
       }
@@ -503,7 +579,7 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
     }
 
     if (content.headers && content.headers.length > 0) {
-      improvements += `• **Headings**: Convert to question format immediately (e.g., "What is X?" instead of "X") to capture long-tail searches.\n`;
+      improvements += `• **Headings**: Consider converting to question format (e.g., "What is X?" instead of "X") to capture long-tail searches.\n`;
     }
 
     return improvements;
@@ -539,12 +615,12 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
     if (evaluation.eeat_score) {
       // Hostelworld format with individual scores
       const metrics = [
-        { key: 'eeat_score', name: 'EEAT Score', weight: 25 },
-        { key: 'technical_score', name: 'Technical Score', weight: 20 },
+        { key: 'eeat_score', name: 'EEAT Score', weight: 20 },
+        { key: 'technical_score', name: 'Technical Score', weight: 10 },
         { key: 'relevance_score', name: 'Relevance Score', weight: 20 },
-        { key: 'text_quality_score', name: 'Text Quality Score', weight: 15 },
-        { key: 'ai_optimization_score', name: 'AI Optimization Score', weight: 10 },
-        { key: 'freshness_score', name: 'Freshness Score', weight: 10 }
+        { key: 'text_quality_score', name: 'Text Quality Score', weight: 10 },
+        { key: 'ai_optimization_score', name: 'AI Optimization Score', weight: 25 },
+        { key: 'freshness_score', name: 'Freshness Score', weight: 15 }
       ];
 
       metrics.forEach(metric => {
@@ -637,11 +713,11 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
       .replace(/you could /gi, '')
       .replace(/it would be good to /gi, '')
       .replace(/try to /gi, '')
-      .replace(/should /gi, 'must ')
-      .replace(/could improve /gi, 'improve immediately')
-      .replace(/may want to /gi, 'must ')
-      .replace(/would benefit from /gi, 'requires immediate')
-      .replace(/recommend /gi, 'execute')
+      .replace(/should /gi, 'could ')
+      .replace(/could improve /gi, 'could enhance')
+      .replace(/may want to /gi, 'might consider ')
+      .replace(/would benefit from /gi, 'could benefit from')
+      .replace(/recommend /gi, 'suggest')
       .replace(/suggest /gi, 'implement now:');
   }
 }
