@@ -32,9 +32,9 @@ class WordPressClient {
       let endpoint;
       
       if (identifier.type === 'slug') {
-        endpoint = `/wp-json/wp/v2/posts?slug=${encodeURIComponent(identifier.value)}`;
+        endpoint = `/wp-json/wp/v2/posts?slug=${encodeURIComponent(identifier.value)}&_embed=1`;
       } else if (identifier.type === 'id') {
-        endpoint = `/wp-json/wp/v2/posts/${identifier.value}`;
+        endpoint = `/wp-json/wp/v2/posts/${identifier.value}?_embed=1`;
       } else {
         throw new Error(`Invalid identifier type: ${identifier.type}`);
       }
@@ -157,6 +157,15 @@ Stack trace: ${error.stack}`);
    * @returns {Object} Normalized post data
    */
   normalizePostData(postData) {
+    // Log metadata availability for debugging
+    console.log('[WordPress] Metadata availability check:', {
+      has_yoast_head_json: !!postData.yoast_head_json,
+      yoast_keys: postData.yoast_head_json ? Object.keys(postData.yoast_head_json) : [],
+      has_meta: !!postData.meta,
+      meta_keys: postData.meta ? Object.keys(postData.meta) : [],
+      has_embedded: !!postData._embedded
+    });
+
     return {
       id: postData.id,
       slug: postData.slug,
@@ -170,10 +179,14 @@ Stack trace: ${error.stack}`);
       tags: postData.tags || [],
       featured_media: postData.featured_media,
       link: postData.link,
-      // Extract meta data if available
+      status: postData.status,
+      type: postData.type,
+      // Extract meta data if available - prioritize yoast_head_json
       meta: postData.meta || {},
       // Extract Yoast SEO data if available
-      yoast_head: postData.yoast_head_json || null,
+      yoast_head_json: postData.yoast_head_json || null,
+      // Include embedded data if available
+      _embedded: postData._embedded || null,
       // Raw data for debugging
       raw: postData
     };

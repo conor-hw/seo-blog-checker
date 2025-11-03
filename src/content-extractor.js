@@ -13,7 +13,8 @@ class ContentExtractor {
    */
   extract(data) {
     // Detect data format
-    const isWordPressData = data.content && data.content.rendered;
+    // WordPress data has normalized structure with yoast_head_json, meta, and string content
+    const isWordPressData = data.yoast_head_json !== undefined || data.meta !== undefined || (data.id && data.slug && data.link);
     const isUniversalData = data.content && data.content.text;
     
     if (isWordPressData) {
@@ -30,6 +31,10 @@ class ContentExtractor {
    * Extract content from WordPress API format
    */
   extractWordPressContent(wordpressData) {
+    
+    const yoast = wordpressData.yoast_head_json || {};
+    const meta = wordpressData.meta || {};
+    
     const extractedContent = {
       post_id: wordpressData.id,
       slug: wordpressData.slug,
@@ -38,20 +43,25 @@ class ContentExtractor {
       content: this.stripHtml(wordpressData.content?.rendered || wordpressData.content || ''),
       content_html: wordpressData.content?.rendered || wordpressData.content || '',
       excerpt: this.stripHtml(wordpressData.excerpt?.rendered || wordpressData.excerpt || ''),
-      meta_description: wordpressData.yoast_head_json?.description || wordpressData.meta?._yoast_wpseo_metadesc || '',
-      keywords: wordpressData.yoast_head_json?.keywords || (wordpressData.meta?._yoast_wpseo_focuskw ? [wordpressData.meta._yoast_wpseo_focuskw] : []),
+      
+      // Simple fallback: yoast_head_json first, then meta
+      meta_description: yoast.description || meta._yoast_wpseo_metadesc || '',
+      keywords: yoast.keywords || (meta._yoast_wpseo_focuskw ? [meta._yoast_wpseo_focuskw] : []),
+      
       headers: this.extractHeadings(wordpressData.content?.rendered || ''),
       word_count: this.getWordCount(wordpressData.content?.rendered || ''),
+      last_modified: wordpressData.modified || '',
+      yoast_head_json: wordpressData.yoast_head_json || null,
       
-      // Enhanced WordPress/Yoast SEO data
+      // Enhanced WordPress/Yoast SEO data with simple fallback
       yoast_seo_score: wordpressData.meta?._yoast_wpseo_linkdex || '',
       yoast_readability_score: wordpressData.meta?._yoast_wpseo_content_score || '',
-      yoast_focus_keyword: wordpressData.yoast_head_json?.focus_keywords || wordpressData.meta?._yoast_wpseo_focuskw || '',
-      yoast_seo_title: wordpressData.yoast_head_json?.title || wordpressData.meta?._yoast_wpseo_title || '',
-      yoast_canonical: wordpressData.yoast_head_json?.canonical || wordpressData.meta?._yoast_wpseo_canonical || '',
-      yoast_noindex: wordpressData.yoast_head_json?.robots?.index === 'noindex' || wordpressData.meta?._yoast_wpseo_meta_robots_noindex === '1' || false,
-      yoast_nofollow: wordpressData.yoast_head_json?.robots?.follow === 'nofollow' || wordpressData.meta?._yoast_wpseo_meta_robots_nofollow === '1' || false,
-      primary_category: wordpressData.yoast_head_json?.primary_category || wordpressData.meta?._yoast_wpseo_primary_category || '',
+      yoast_focus_keyword: yoast.focus_keywords || meta._yoast_wpseo_focuskw || '',
+      yoast_seo_title: yoast.title || meta._yoast_wpseo_title || '',
+      yoast_canonical: yoast.canonical || meta._yoast_wpseo_canonical || '',
+      yoast_noindex: yoast.robots?.index === 'noindex' || meta._yoast_wpseo_meta_robots_noindex === '1' || false,
+      yoast_nofollow: yoast.robots?.follow === 'nofollow' || meta._yoast_wpseo_meta_robots_nofollow === '1' || false,
+      primary_category: yoast.primary_category || meta._yoast_wpseo_primary_category || '',
       
       // WordPress post metadata
       post_status: wordpressData.status || '',
@@ -70,13 +80,13 @@ class ContentExtractor {
       canonical_url: wordpressData.meta?._yoast_wpseo_canonical || wordpressData.link || '',
       robots: this.buildRobotsDirective(wordpressData.meta, wordpressData.yoast_head_json),
       
-      // Social media metadata from Yoast
-      og_title: wordpressData.yoast_head_json?.og_title || wordpressData.meta?._yoast_wpseo_opengraph_title || '',
-      og_description: wordpressData.yoast_head_json?.og_description || wordpressData.meta?._yoast_wpseo_opengraph_description || '',
-      og_image: wordpressData.yoast_head_json?.og_image?.[0]?.url || wordpressData.meta?._yoast_wpseo_opengraph_image || '',
-      twitter_title: wordpressData.yoast_head_json?.twitter_title || wordpressData.meta?._yoast_wpseo_twitter_title || '',
-      twitter_description: wordpressData.yoast_head_json?.twitter_description || wordpressData.meta?._yoast_wpseo_twitter_description || '',
-      twitter_image: wordpressData.yoast_head_json?.twitter_image || wordpressData.meta?._yoast_wpseo_twitter_image || ''
+      // Social media metadata with simple fallback
+      og_title: yoast.og_title || meta._yoast_wpseo_opengraph_title || '',
+      og_description: yoast.og_description || meta._yoast_wpseo_opengraph_description || '',
+      og_image: yoast.og_image?.[0]?.url || meta._yoast_wpseo_opengraph_image || '',
+      twitter_title: yoast.twitter_title || meta._yoast_wpseo_twitter_title || '',
+      twitter_description: yoast.twitter_description || meta._yoast_wpseo_twitter_description || '',
+      twitter_image: yoast.twitter_image || meta._yoast_wpseo_twitter_image || ''
     };
 
     return this.applyConfigFilter(extractedContent);
@@ -189,6 +199,17 @@ class ContentExtractor {
     for (const [field, enabled] of Object.entries(flatConfig)) {
       if (enabled && extractedContent[field] !== undefined) {
         filteredContent[field] = extractedContent[field];
+      }
+    }
+    
+    // Handle nested configurations (e.g., yoast_seo.yoast_seo_title -> yoast_seo_title)
+    for (const [section, sectionConfig] of Object.entries(this.config)) {
+      if (typeof sectionConfig === 'object' && sectionConfig !== null && !Array.isArray(sectionConfig)) {
+        for (const [field, enabled] of Object.entries(sectionConfig)) {
+          if (enabled && extractedContent[field] !== undefined) {
+            filteredContent[field] = extractedContent[field];
+          }
+        }
       }
     }
 
