@@ -7,9 +7,9 @@ class GeminiClient {
       throw new Error('GEMINI_API_KEY environment variable is required');
     }
 
-    this.baseUrl = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent';
+    this.baseUrl = 'https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent';
     this.apiClient = axios.create({
-      timeout: 60000,
+      timeout: 180000, // 3 minutes
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': 'SEO-Blog-Checker/1.0.0'
@@ -34,6 +34,7 @@ class GeminiClient {
       console.log('[Gemini] Sending request to API...');
       const response = await this.sendRequest(prompt);
       
+      // console.log('[Gemini] Full response structure:', JSON.stringify(response, null, 2));
       console.log('[Gemini] Response received:', {
         hasContent: !!response.candidates?.[0]?.content,
         contentLength: response.candidates?.[0]?.content?.parts?.[0]?.text?.length || 0
@@ -279,7 +280,7 @@ Provide your analysis in this format (ensure proper JSON formatting):
         temperature: 0.3,
         topK: 40,
         topP: 0.95,
-        maxOutputTokens: 2048
+        maxOutputTokens: 16384
       }
     };
 
@@ -337,6 +338,20 @@ Provide your analysis in this format (ensure proper JSON formatting):
 
   parseEvaluationResponse(response) {
     try {
+      // Check if response structure is valid
+      if (!response.candidates || !response.candidates[0] || !response.candidates[0].content) {
+        throw new Error('Invalid response structure from Gemini API');
+      }
+      
+      // Check if response was truncated
+      if (response.candidates[0].finishReason === 'MAX_TOKENS') {
+        throw new Error('Gemini response was truncated due to token limit. Try reducing the prompt size or increasing maxOutputTokens.');
+      }
+      
+      if (!response.candidates[0].content.parts || !response.candidates[0].content.parts[0]) {
+        throw new Error('Response content parts are missing from Gemini API');
+      }
+      
       const text = response.candidates[0].content.parts[0].text;
       console.log('[Gemini] Raw response text length:', text.length);
       console.log('[Gemini] Raw response preview:', text.substring(0, 500) + '...');
@@ -349,63 +364,25 @@ Provide your analysis in this format (ensure proper JSON formatting):
       // Extract JSON from the response
       let jsonStr = text.trim();
       
+      // Remove markdown code blocks if present
+      jsonStr = jsonStr.replace(/```json\s*\n?/g, '').replace(/```\s*$/g, '');
+      
       // If there's text before/after the JSON, extract just the JSON
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         jsonStr = jsonMatch[0];
       }
 
-      // Basic cleanup
+      // Basic cleanup - be more conservative to avoid breaking valid JSON
       jsonStr = jsonStr
-        // Remove all comments
-        .replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '')
-        // Remove non-printable characters
-        .replace(/[\x00-\x1F\x7F-\x9F]/g, '')
-        // Fix common array issues
-        .replace(/"\s*\n\s*"/g, '", "')  // Fix newlines between array elements
-        .replace(/"\s*\]/g, '"]')  // Fix trailing array elements
-        .replace(/\[\s*"/g, '["')  // Fix array opening
-        // Fix missing commas in arrays
-        .replace(/(")\s*(\s*")/g, '$1, $2')
-        // Fix missing commas between objects
-        .replace(/}\s*{/g, '}, {')
-        // Normalize whitespace after fixes
-        .replace(/\s+/g, ' ');
+        // Remove only C-style comments (not // which might be in URLs)
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        // Remove only control characters, preserve backticks and other formatting
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+        // Normalize excessive whitespace but preserve single spaces
+        .replace(/\s{2,}/g, ' ');
 
-      // Ensure arrays are properly formatted
-      let depth = 0;
-      let inString = false;
-      let inArray = false;
-      let lastChar = '';
-      let result = '';
-
-      for (let i = 0; i < jsonStr.length; i++) {
-        const char = jsonStr[i];
-        
-        // Handle strings
-        if (char === '"' && lastChar !== '\\') {
-          inString = !inString;
-        }
-        
-        // Only process special characters outside strings
-        if (!inString) {
-          if (char === '[') {
-            depth++;
-            inArray = true;
-          } else if (char === ']') {
-            depth--;
-            inArray = depth > 0;
-          } else if (inArray && char === '"' && jsonStr[i-1] === '"') {
-            // Add missing comma between array elements
-            result += ',';
-          }
-        }
-        
-        result += char;
-        lastChar = char;
-      }
-
-      jsonStr = result;
+      // Skip complex array formatting - let JSON.parse handle valid JSON
       console.log('[Gemini] Cleaned JSON length:', jsonStr.length);
       console.log('[Gemini] Cleaned JSON preview:', jsonStr.substring(0, 200) + '...');
       
