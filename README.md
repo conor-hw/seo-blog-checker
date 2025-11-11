@@ -4,7 +4,7 @@ A Node.js-based script that automates SEO quality evaluation of WordPress blog p
 
 ##  Features
 
-- **AI-Powered Evaluation**: Uses Google's Gemini 1.5 Flash for intelligent SEO analysis
+- **AI-Powered Evaluation**: Uses Google's Gemini 2.5 Flash for intelligent SEO analysis
 - **WordPress Integration**: Fetches content directly from WordPress REST API
 - **Configurable Criteria**: Support for multiple evaluation configurations
 - **Batch Processing**: Process multiple posts efficiently with parallel processing
@@ -17,7 +17,7 @@ A Node.js-based script that automates SEO quality evaluation of WordPress blog p
 ### Prerequisites
 
 - Node.js 18.x LTS or higher
-- Gemini API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+- Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
 - WordPress site with REST API enabled
 
 ### Installation
@@ -46,10 +46,24 @@ A Node.js-based script that automates SEO quality evaluation of WordPress blog p
 
 4. **Test the setup**
    ```bash
+   # Test WordPress connection
    node test-wordpress.js
+   
+   # Test Gemini API connection
+   node test-gemini-simple.js
+   
+   # Test full integration
+   node test-integration.js
    ```
 
 ## 📖 Usage
+
+### 🎯 Most Common Command (Recommended)
+
+For bulk analysis using your slugs file:
+```bash
+node src/index.js evaluate --file slugs.txt --evaluation-config hostelworld
+```
 
 ### Single Post Evaluation
 
@@ -67,11 +81,11 @@ node src/index.js evaluate --id 123 --evaluation-config hostelworld
 # Comma-separated slugs
 node src/index.js evaluate --slugs "post1,post2,post3" --evaluation-config hostelworld
 
-# From file (newline-separated slugs)
+# From file (newline-separated slugs) - RECOMMENDED FOR BULK ANALYSIS
 node src/index.js evaluate --file slugs.txt --evaluation-config hostelworld
 
-# With custom batch size
-node src/index.js evaluate --file slugs.txt --evaluation-config hostelworld --batch-size 5
+# With custom batch size (adjust based on your system performance)
+node src/index.js evaluate --file slugs.txt --evaluation-config hostelworld --batch-size 3
 ```
 
 ### Configuration Options
@@ -80,8 +94,24 @@ node src/index.js evaluate --file slugs.txt --evaluation-config hostelworld --ba
 # Use different extraction config
 node src/index.js evaluate --slug "post-slug" --extraction-config seo-focused --evaluation-config hostelworld
 
-# Use different evaluation config
-node src/index.js evaluate --slug "post-slug" --evaluation-config technical-seo
+# Use different evaluation config (if you have other configs)
+node src/index.js evaluate --slug "post-slug" --evaluation-config default
+
+# Alternative using npm scripts
+npm run evaluate -- evaluate --file slugs.txt --evaluation-config hostelworld
+```
+
+### ⚡ Quick Commands Reference
+
+```bash
+# Single post test
+node src/index.js evaluate --slug "the-50-weirdest-foods-from-around-the-world" --evaluation-config hostelworld
+
+# Bulk analysis (most common)
+node src/index.js evaluate --file slugs.txt --evaluation-config hostelworld
+
+# Smaller batch for testing
+node src/index.js evaluate --file slugs.txt --evaluation-config hostelworld --batch-size 1
 ```
 
 ## 📁 Project Structure
@@ -233,6 +263,11 @@ Lines starting with `#` are treated as comments and ignored.
 node test-wordpress.js
 ```
 
+### Test Gemini API Connection
+```bash
+node test-gemini-simple.js
+```
+
 ### Test Full Integration
 ```bash
 node test-integration.js
@@ -246,6 +281,11 @@ node test-hostelworld-evaluation.js
 ### Test Batch Processing
 ```bash
 node test-batch-processing.js
+```
+
+### Test Report Generation
+```bash
+node test-report-generation.js
 ```
 
 ## 🎯 Hostelworld-Specific Features
@@ -306,10 +346,12 @@ Failed posts are logged but don't stop the batch processing.
 
 ## 📈 Performance
 
-- **Single post**: ~30 seconds
+- **Single post**: ~45-60 seconds (due to comprehensive AI analysis)
 - **Batch processing**: Configurable parallel processing
 - **Default batch size**: 3 concurrent requests
 - **Memory usage**: Minimal, processes one post at a time
+- **Token limits**: Up to 16,384 output tokens for detailed analysis
+- **Timeout**: 3 minutes per API request to handle large content
 
 ## 🔒 Security
 
@@ -341,8 +383,10 @@ MIT License - see LICENSE file for details
 
 **Gemini API Errors**
 - Verify `GEMINI_API_KEY` is valid
-- Check API quota limits
-- Ensure the key has proper permissions
+- Check API quota limits at [Google AI Studio](https://aistudio.google.com/app/apikey)
+- Ensure the key has proper permissions for Gemini 2.5 Flash
+- If you get "model not found" errors, verify you're using the correct model name
+- For timeout errors, check your internet connection or try reducing content size
 
 **Configuration File Errors**
 - Validate JSON/YAML syntax
@@ -363,4 +407,21 @@ MIT License - see LICENSE file for details
 
 ---
 
-**Built for Hostelworld SEO and Content teams** ��✈️
+**Built for Hostelworld SEO and Content teams** 🚀✈️
+
+---
+
+## 🔄 Recent Updates
+
+### v2.0.0 - Gemini 2.5 Flash Integration
+- **Upgraded to Gemini 2.5 Flash**: Enhanced AI analysis with better understanding and more detailed evaluations
+- **Improved JSON Parsing**: More robust handling of AI responses with special characters and formatting
+- **Increased Token Limits**: Up to 16,384 output tokens for comprehensive analysis
+- **Enhanced Error Handling**: Better timeout management and connection retry logic
+- **Performance Optimizations**: Improved response parsing and validation
+
+### Key Improvements
+- More detailed and nuanced SEO analysis
+- Better handling of large content pieces
+- Improved reliability and error recovery
+- Enhanced report quality with deeper insights
