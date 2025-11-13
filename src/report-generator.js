@@ -706,6 +706,19 @@ ${this.generateOptimizationRecommendation(evaluation, content)}
    * Convert suggestions to assertive language
    */
   makeAssertive(text) {
+    // Handle non-string inputs gracefully
+    if (typeof text !== 'string') {
+      // If it's an object with a text property, use that
+      if (text && typeof text === 'object' && text.improvement) {
+        text = text.improvement;
+      } else if (text && typeof text === 'object' && text.recommendation) {
+        text = text.recommendation;
+      } else {
+        // Convert to string as fallback
+        text = String(text);
+      }
+    }
+    
     // Convert common suggestion phrases to assertive commands
     return text
       .replace(/consider /gi, '')
